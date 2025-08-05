@@ -1,22 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:untitled/account.dart';
+import 'package:untitled/homepage.dart';
+import 'package:untitled/login.dart';
+import 'package:untitled/messages.dart';
+import 'package:untitled/request.dart';
+import 'package:untitled/account.dart';
 
-class Home extends StatelessWidget {
-  const Home ({super.key});
+class Home extends StatefulWidget {
+  const Home({super.key});
+
+  @override
+  State<Home> createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
+  int currentIndex = 0;
+  List pages = [
+    Login(),
+    Request(),
+    Messages(),
+    Account(userData: {},),
+  ];
+
+
+  void changepage(int index){
+    setState(() {
+      currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue,
-      appBar: AppBar(
-        title: Text('Home',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-        ),
-      ),
+
+      body: pages[currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+          onTap: changepage,
+          type: BottomNavigationBarType.fixed,
+          items: [
+            BottomNavigationBarItem(icon: Icon(Icons.home),
+                label:"Home"
+            ),
+            BottomNavigationBarItem(icon: Icon(Icons.notification_add),
+                label: "request"
+            ),
+             BottomNavigationBarItem(icon: Icon(Icons.message),
+                  label: "messages"
+             ),
+             BottomNavigationBarItem(icon: Icon(Icons.account_circle),
+                label: "account"
+             ),
+          ]
+    ),
     );
   }
 }
+
 

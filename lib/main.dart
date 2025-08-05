@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:untitled/home.dart';
 import 'package:untitled/homepage.dart';
+import 'package:untitled/start.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,7 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Homepage(),
+      home: Start(),
       debugShowCheckedModeBanner: false,
     );
   }

@@ -7,6 +7,7 @@ class Homepage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.blue,
       appBar: AppBar(
         backgroundColor: Colors.blue,
         title: Text('On work Quoi',
@@ -27,7 +28,7 @@ class Homepage extends StatelessWidget {
                 children: [
 
                   SizedBox(height: 40),
-                  Image.asset('assets/images/work.png',
+                  Image.asset('assets/images/work-removebg-preview.png',
                     height: 320,
                   ),
                 ],
@@ -79,6 +80,7 @@ class Homepage extends StatelessWidget {
               )
             ],
           )
+
       ),
     );
   }
