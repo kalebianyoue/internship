@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:untitled/service_request.dart';
+import 'package:untitled/services_detail.dart';
+
+import 'messages.dart';
+
  void main() => runApp(Request());
 
 class Request extends StatelessWidget {
@@ -82,7 +87,7 @@ class _RequestScreen extends State<RequestScreen>{
           ),
           Expanded(
               child: isOngoingSelected
-                ? buildOngoingContent()
+                ? buildOngoingContent(context)
                   : buildCompleteContent(),
           ),
         ],
@@ -90,7 +95,7 @@ class _RequestScreen extends State<RequestScreen>{
     );
   }
 }
-Widget buildOngoingContent() {
+Widget buildOngoingContent(BuildContext context) {
   return Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -110,7 +115,13 @@ Widget buildOngoingContent() {
           ),
         ),
         SizedBox(height: 10),
-        ElevatedButton(onPressed: (){},
+        ElevatedButton(onPressed: (){
+          Navigator.push(
+           context,
+            MaterialPageRoute(builder: (context) => ServiceRequest(),
+            ),
+          );
+        },
             child: Text("Request a service",
             style: TextStyle(
               color: Colors.white,
@@ -131,8 +142,4 @@ Widget buildOngoingContent() {
     ),
   );
 }
-Widget buildCompleteContent() {
-  return Center(
-    child: Text("No Completed request yet."),
-  );
-}
+

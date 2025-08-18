@@ -54,10 +54,10 @@ class Account extends StatelessWidget {
                      ),
                      CircleAvatar(
                        radius: 30,
-                       backgroundColor: Colors.blue[100],
+                       backgroundColor: Colors.white,
                        child: Icon(Icons.person,
                        size: 30,
-                         color: Colors.blue
+                         color: Colors.white,
                        ),
                      )
                    ],
@@ -79,7 +79,7 @@ class Account extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                  borderRadius: BorderRadius.circular(25),
-                  color: Colors.blueGrey,
+                  color: Colors.white,
                    ),
               child: Column(
                 children: [
@@ -94,7 +94,7 @@ class Account extends StatelessWidget {
               ),
                Divider(),
                 ListTile(
-                  leading: Icon(Icons.person),
+                  leading: Icon(Icons.language),
                   title: Text("Language"),
                   subtitle: Text("English"),
                   trailing: Icon(Icons.arrow_forward_ios, size: 16),
@@ -104,9 +104,9 @@ class Account extends StatelessWidget {
                 ),
                 Divider(),
                   ListTile(
-                    leading: Icon(Icons.person),
-                    title: Text("Language"),
-                    subtitle: Text("English"),
+                    leading: Icon(Icons.payment),
+                    title: Text("Payment Method"),
+                    subtitle: Text("MOMO , Orange Money"),
                     trailing: Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
 
@@ -114,16 +114,56 @@ class Account extends StatelessWidget {
                   ),
                   Divider(),
                   ListTile(
-                    leading: Icon(Icons.person),
-                    title: Text("Language"),
-                    subtitle: Text("English"),
+                    leading: Icon(Icons.notification_important_outlined),
+                    title: Text("Manage Notifications"),
+                    subtitle: Text("Disabled"),
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+
+                    },
+                  ),
+               ],
+              ),
+            ),
+          ),
+          Text("Product",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                color: Colors.white,
+              ),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.person_add),
+                    title: Text("Invite friends"),
+                    subtitle: Text("Earn 5% of the amount spent by your friends for life"),
                     trailing: Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
 
                     },
                   ),
                   Divider(),
-               ],
+                  ListTile(
+                    leading: Icon(Icons.crop_square),
+                    title: Text("Direct workers"),
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+
+                    },
+
+                  ),
+
+                ],
               ),
             ),
           ),

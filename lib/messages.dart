@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:untitled/service_request.dart';
 void main() => runApp(Messages());
 
 class Messages extends StatelessWidget {
@@ -82,7 +83,7 @@ class _MessagesScreen extends State<MessagesScreen>{
           ),
           Expanded(
             child: isOngoingSelected
-                ? buildOngoingContent()
+                ? buildOngoingContent(context)
                 : buildCompleteContent(),
           ),
         ],
@@ -90,7 +91,7 @@ class _MessagesScreen extends State<MessagesScreen>{
     );
   }
 }
-Widget buildOngoingContent() {
+Widget buildOngoingContent(context) {
   return Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -110,7 +111,14 @@ Widget buildOngoingContent() {
           ),
         ),
         SizedBox(height: 10),
-        ElevatedButton(onPressed: (){},
+        ElevatedButton(onPressed: (){
+          Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ServiceRequest(),
+              ),
+          );
+
+        },
           child: Text("Request a service",
             style: TextStyle(
               color: Colors.white,
