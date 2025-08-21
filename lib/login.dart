@@ -479,6 +479,9 @@ class SubServicePage extends StatelessWidget {
   const SubServicePage({Key? key, required this.category, required this.subServices})
       : super(key: key);
 
+
+
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -521,7 +524,9 @@ class SubServicePage extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ServicesDetail()),
+                  MaterialPageRoute(
+                    builder: (context) => ServicesDetail(),
+                  ),
                 );
               },
             ),

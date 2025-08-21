@@ -1,31 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:untitled/service_request.dart';
-void main() => runApp(Messages());
+import 'package:untitled/services_detail.dart';
 
-class Messages extends StatelessWidget {
+import 'chat_list.dart';
+
+ void main() => runApp(Request());
+
+class Request extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        home: MessagesScreen()
+        home: RequestScreen()
     );
   }
 }
-class MessagesScreen extends StatefulWidget {
+class RequestScreen extends StatefulWidget {
   @override
-  _MessagesScreen createState() => _MessagesScreen();
+  _RequestScreen createState() => _RequestScreen();
 }
-class _MessagesScreen extends State<MessagesScreen>{
+class _RequestScreen extends State<RequestScreen>{
   bool isOngoingSelected = true;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Messages",
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Text("My Requests",
+        style: TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.bold,
+        ),
         ),
       ),
       body: Column(
@@ -41,23 +45,23 @@ class _MessagesScreen extends State<MessagesScreen>{
                 Expanded(
                     child: GestureDetector(
                       onTap: () => setState(() => isOngoingSelected = true),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(vertical: 5),
-                        decoration: BoxDecoration(
-                          color: isOngoingSelected ? Colors.white :Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Center(
-                          child: Text("Ongoing",
+                        child: Container(
+                          padding: EdgeInsets.symmetric(vertical: 5),
+                          decoration: BoxDecoration(
+                            color: isOngoingSelected ? Colors.white :Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text("Ongoing",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: isOngoingSelected ? Colors.black : Colors.grey,
                             ),
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                ),
+                      )
+                    ),
                 Expanded(
                     child: GestureDetector(
                       onTap: () => setState(() => isOngoingSelected = true),
@@ -82,65 +86,62 @@ class _MessagesScreen extends State<MessagesScreen>{
             ),
           ),
           Expanded(
-            child: isOngoingSelected
+              child: isOngoingSelected
                 ? buildOngoingContent(context)
-                : buildCompleteContent(),
+                  : buildCompleteContent(),
           ),
         ],
       ),
     );
   }
+
+  buildCompleteContent() {}
 }
-Widget buildOngoingContent(context) {
+Widget buildOngoingContent(BuildContext context) {
   return Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.message_sharp, size: 80, color: Colors.grey),
+        Icon(Icons.hourglass_empty, size: 80, color: Colors.grey),
         SizedBox(height: 20),
-        Text("No Discussion",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+        Text("No Request",
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+        ),
         ),
         SizedBox(height: 8),
-        Text("You have not book a jobber yet",
+        Text("Request a service and find a provider in just few minutes",
           style: TextStyle(
-            color: Colors.grey,
+              color: Colors.grey,
           ),
         ),
         SizedBox(height: 10),
         ElevatedButton(onPressed: (){
           Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ServiceRequest(),
-              ),
+           context,
+            MaterialPageRoute(builder: (context) => ServiceRequest(),
+            ),
           );
-
         },
-          child: Text("Request a service",
+            child: Text("Request a service",
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 20,
             ),
-          ),
+            ),
 
           style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              )
+            backgroundColor: Colors.blue,
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            )
           ),
         )
       ],
     ),
   );
 }
-Widget buildCompleteContent() {
-  return Center(
-    child: Text("No Completed request yet."),
-  );
-}
+

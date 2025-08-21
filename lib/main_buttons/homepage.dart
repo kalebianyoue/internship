@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:untitled/signin.dart';
+import 'package:untitled/auth_page.dart';
 
 class Homepage extends StatelessWidget {
   const Homepage({super.key});
@@ -58,12 +58,15 @@ class Homepage extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => Signin()),
+                            MaterialPageRoute(builder: (context) => AuthPage()),
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            padding: EdgeInsets.symmetric(vertical: 16)
+                          backgroundColor: Colors.blueAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         child: Text('Get Started',
                           style: TextStyle(

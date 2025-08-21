@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:untitled/account.dart';
-import 'package:untitled/homepage.dart';
+import 'package:untitled/main_buttons/account.dart';
+import 'package:untitled/main_buttons/homepage.dart';
 import 'package:untitled/login.dart';
-import 'package:untitled/messages.dart';
-import 'package:untitled/request.dart';
-import 'package:untitled/account.dart';
+import 'package:untitled/main_buttons/chat_list.dart';
+import 'package:untitled/main_buttons/request.dart';
+import 'package:untitled/main_buttons/account.dart';
 import 'package:untitled/services_detail.dart';
 
 class Home extends StatefulWidget {
@@ -19,7 +19,7 @@ class _HomeState extends State<Home> {
   List pages = [
     Login(),
     Request(),
-    Messages(),
+    ChatList(),
     Account(userData: {},),
   ];
 

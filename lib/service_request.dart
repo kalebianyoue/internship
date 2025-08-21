@@ -45,54 +45,30 @@ class ServiceRequest extends StatelessWidget {
             ),
             SizedBox(height: 20),
 
-            // 📋 Main Categories
+            // 📋 Categories
             _buildCategoryItem(context, icon: Icons.eco, text: 'Gardening', subServices: [
-              "Cultivating",
-              "Exterior Equipment",
-              "Bush Clearing",
-              "Tree Pruning",
+              "Cultivating", "Exterior Equipment", "Bush Clearing", "Tree Pruning"
             ]),
             _buildCategoryItem(context, icon: Icons.cleaning_services, text: 'Cleaning', subServices: [
-              "House Cleaning",
-              "Office Cleaning",
-              "Laundry",
-              "Deep Cleaning",
+              "House Cleaning", "Office Cleaning", "Laundry", "Deep Cleaning"
             ]),
             _buildCategoryItem(context, icon: Icons.construction, text: 'Repairs', subServices: [
-              "General Repairs",
-              "Appliance Fixing",
-              "Roof Repairs",
-              "Window & Door Fixing",
+              "General Repairs", "Appliance Fixing", "Roof Repairs", "Window & Door Fixing"
             ]),
             _buildCategoryItem(context, icon: Icons.local_shipping, text: 'Delivery', subServices: [
-              "Food Delivery",
-              "Grocery Delivery",
-              "Package Delivery",
-              "Furniture Delivery",
+              "Food Delivery", "Grocery Delivery", "Package Delivery", "Furniture Delivery"
             ]),
             _buildCategoryItem(context, icon: Icons.plumbing, text: 'Plumbing', subServices: [
-              "Pipe Installation",
-              "Leak Repairs",
-              "Bathroom Fittings",
-              "Water Tank Cleaning",
+              "Pipe Installation", "Leak Repairs", "Bathroom Fittings", "Water Tank Cleaning"
             ]),
             _buildCategoryItem(context, icon: Icons.electrical_services, text: 'Electrician', subServices: [
-              "Wiring",
-              "Lighting Installation",
-              "Generator Maintenance",
-              "Troubleshooting",
+              "Wiring", "Lighting Installation", "Generator Maintenance", "Troubleshooting"
             ]),
             _buildCategoryItem(context, icon: Icons.home_repair_service, text: 'Carpentry', subServices: [
-              "Furniture Making",
-              "Wood Repairs",
-              "Cabinet Installation",
-              "Polishing",
+              "Furniture Making", "Wood Repairs", "Cabinet Installation", "Polishing"
             ]),
             _buildCategoryItem(context, icon: Icons.brush, text: 'Painting', subServices: [
-              "Interior Painting",
-              "Exterior Painting",
-              "Wall Designs",
-              "Repainting",
+              "Interior Painting", "Exterior Painting", "Wall Designs", "Repainting"
             ]),
           ],
         ),
@@ -120,7 +96,6 @@ class ServiceRequest extends StatelessWidget {
         trailing: Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
         contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         onTap: () {
-          // 👉 Navigate to Sub-service Page
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -134,12 +109,13 @@ class ServiceRequest extends StatelessWidget {
   }
 }
 
-// 🌟 Page showing sub-services
+// 🌟 SubService Page
 class SubServicePage extends StatelessWidget {
   final String category;
   final List<String> subServices;
 
-  const SubServicePage({Key? key, required this.category, required this.subServices})
+  const SubServicePage(
+      {Key? key, required this.category, required this.subServices})
       : super(key: key);
 
   @override
@@ -165,13 +141,14 @@ class SubServicePage extends StatelessWidget {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               onTap: () {
-              Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => ServicesDetail()),
-               );
-          },
-
-                // 👉 Later: Navigate to booking or detail page
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        ServicesDetail(),
+                  ),
+                );
+              },
             ),
           );
         },
