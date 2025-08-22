@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:untitled/home.dart';
 
 class AuthPage extends StatefulWidget {
@@ -23,6 +24,8 @@ class _AuthPageState extends State<AuthPage> {
 
   bool acceptTerms = false;
 
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
   Future<void> _selectDate(BuildContext context) async {
     DateTime? picked = await showDatePicker(
       context: context,
@@ -35,6 +38,53 @@ class _AuthPageState extends State<AuthPage> {
       setState(() {
         dobController.text = "${picked.day}/${picked.month}/${picked.year}";
       });
+    }
+  }
+
+  Future<void> signUp() async {
+    if (passwordController.text != confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Passwords do not match")),
+      );
+      return;
+    }
+
+    try {
+      await _auth.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const Home(),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? "Sign up failed")),
+      );
+    }
+  }
+
+  Future<void> signIn() async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const Home(),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? "Login failed")),
+      );
     }
   }
 
@@ -189,9 +239,20 @@ class _AuthPageState extends State<AuthPage> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {
+                        if (emailController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Enter email to reset password"),
+                            ),
+                          );
+                          return;
+                        }
+                        _auth.sendPasswordResetEmail(
+                          email: emailController.text.trim(),
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("Forgot password tapped!"),
+                            content: Text("Password reset email sent"),
                           ),
                         );
                       },
@@ -209,24 +270,8 @@ class _AuthPageState extends State<AuthPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: showSignUp
-                        ? (acceptTerms
-                        ? () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Home(),
-                        ),
-                      );
-                    }
-                        : null)
-                        : () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Home(),
-                        ),
-                      );
-                    },
+                        ? (acceptTerms ? signUp : null)
+                        : signIn,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       padding: const EdgeInsets.symmetric(vertical: 16),

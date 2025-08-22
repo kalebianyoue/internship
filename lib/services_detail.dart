@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 void main() {
   runApp(ServicesDetail());
@@ -15,6 +17,8 @@ class BookingData {
   String phoneNumber;
   File? workImage;
   String description;
+  double? latitude;
+  double? longitude;
 
   BookingData({
     this.jobName = 'House',
@@ -25,6 +29,8 @@ class BookingData {
     this.phoneNumber = '',
     this.workImage,
     this.description = '',
+    this.latitude,
+    this.longitude,
   }) : selectedDate = selectedDate ?? DateTime.now();
 }
 
@@ -353,6 +359,7 @@ class _SelectTimePageState extends State<SelectTimePage> {
 }
 
 // ------------------ PAGE 4: SELECT LOCATION ------------------
+
 class SelectLocationPage extends StatefulWidget {
   final BookingData bookingData;
 
@@ -371,12 +378,20 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
 
   String? selectedCity;
   TextEditingController phoneController = TextEditingController();
+  MapController mapController = MapController();
+
+  LatLng? selectedPoint;
 
   @override
   void initState() {
     super.initState();
     phoneController.text = widget.bookingData.phoneNumber;
     selectedCity = widget.bookingData.location.isNotEmpty ? widget.bookingData.location : null;
+
+    // If we have saved coordinates, use them
+    if (widget.bookingData.latitude != null && widget.bookingData.longitude != null) {
+      selectedPoint = LatLng(widget.bookingData.latitude!, widget.bookingData.longitude!);
+    }
   }
 
   @override
@@ -441,6 +456,57 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                       },
                     ),
                     SizedBox(height: 20),
+
+                    Text(
+                      "Or choose on map:",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                    SizedBox(height: 10),
+
+                    Container(
+                      height: 250,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: FlutterMap(
+                          mapController: mapController,
+                          options: MapOptions(
+                            center: selectedPoint ?? LatLng(3.848, 11.502), // Yaoundé as default
+                            zoom: selectedPoint != null ? 13.0 : 6.0,
+                            onTap: (tapPosition, point) {
+                              setState(() {
+                                selectedPoint = point;
+                                widget.bookingData.latitude = point.latitude;
+                                widget.bookingData.longitude = point.longitude;
+                              });
+                            },
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                              userAgentPackageName: 'com.example.booking_app',
+                              maxZoom: 19,
+                            ),
+                            if (selectedPoint != null)
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: selectedPoint!,
+                                    width: 40,
+                                    height: 40,
+                                    child: Icon(Icons.location_on, color: Colors.red, size: 40),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20),
+
                     Text(
                       "Phone Number:",
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -477,7 +543,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: selectedCity != null && phoneController.text.isNotEmpty
+                  onPressed: (selectedCity != null || selectedPoint != null) && phoneController.text.isNotEmpty
                       ? () {
                     Navigator.push(
                       context,
@@ -862,7 +928,10 @@ class SummaryPage extends StatelessWidget {
                       Divider(),
                       _buildSummaryRow(
                         "Location",
-                        bookingData.location,
+                        bookingData.location.isNotEmpty ? bookingData.location :
+                        (bookingData.latitude != null && bookingData.longitude != null
+                            ? "Custom location (${bookingData.latitude!.toStringAsFixed(4)}, ${bookingData.longitude!.toStringAsFixed(4)})"
+                            : "Not selected"),
                             () => Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
@@ -906,11 +975,8 @@ class SummaryPage extends StatelessWidget {
                   ),
                   onPressed: () {
                     // Navigate to service providers list
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ServiceProvidersPage(bookingData: bookingData),
-                      ),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Booking completed! Searching for service providers...')),
                     );
                   },
                   child: Text(
@@ -1027,444 +1093,6 @@ class SummaryPage extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ------------------ PAGE 8: SERVICE PROVIDERS ------------------
-class ServiceProvidersPage extends StatelessWidget {
-  final BookingData bookingData;
-
-  ServiceProvidersPage({required this.bookingData});
-
-  final List<Map<String, dynamic>> serviceProviders = [
-    {
-      'name': 'Marie Kamga',
-      'rating': 4.9,
-      'reviews': 127,
-      'price': 2500,
-      'distance': '2.1 km',
-      'experience': '5 years',
-      'image': '👩🏾‍💼',
-      'specialties': ['Deep Cleaning', 'Kitchen', 'Bathrooms'],
-    },
-    {
-      'name': 'Jean Claude Nkomo',
-      'rating': 4.8,
-      'reviews': 89,
-      'price': 2200,
-      'distance': '3.5 km',
-      'experience': '3 years',
-      'image': '👨🏾‍💼',
-      'specialties': ['General Cleaning', 'Office Cleaning'],
-    },
-    {
-      'name': 'Fatima Abdoulaye',
-      'rating': 4.9,
-      'reviews': 156,
-      'price': 2700,
-      'distance': '1.8 km',
-      'experience': '7 years',
-      'image': '👩🏾‍💼',
-      'specialties': ['Deep Cleaning', 'Laundry', 'Organization'],
-    },
-    {
-      'name': 'Paul Biya Jr.',
-      'rating': 4.7,
-      'reviews': 73,
-      'price': 2000,
-      'distance': '4.2 km',
-      'experience': '2 years',
-      'image': '👨🏾‍💼',
-      'specialties': ['Basic Cleaning', 'Windows'],
-    },
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Available Service Providers"),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
-        children: [
-          Container(
-            padding: EdgeInsets.all(16),
-            color: Colors.blue[50],
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.blue),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    "Showing providers available for ${bookingData.jobName} in ${bookingData.location}",
-                    style: TextStyle(color: Colors.blue[800]),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.all(16),
-              itemCount: serviceProviders.length,
-              itemBuilder: (context, index) {
-                final provider = serviceProviders[index];
-                final totalCost = provider['price'] * bookingData.hours;
-
-                return Card(
-                  elevation: 2,
-                  margin: EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  provider['image'],
-                                  style: TextStyle(fontSize: 30),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    provider['name'],
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.star, color: Colors.amber, size: 16),
-                                      Text(
-                                        " ${provider['rating']} (${provider['reviews']} reviews)",
-                                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.location_on, color: Colors.grey[600], size: 16),
-                                      Text(
-                                        " ${provider['distance']} away",
-                                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                                      ),
-                                      SizedBox(width: 16),
-                                      Icon(Icons.work, color: Colors.grey[600], size: 16),
-                                      Text(
-                                        " ${provider['experience']} experience",
-                                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  "${totalCost} XAF",
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                                Text(
-                                  "for ${bookingData.hours}h",
-                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          "Specialties:",
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                        SizedBox(height: 4),
-                        Wrap(
-                          spacing: 8,
-                          children: provider['specialties'].map<Widget>((specialty) {
-                            return Chip(
-                              label: Text(
-                                specialty,
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              backgroundColor: Colors.blue[100],
-                              labelStyle: TextStyle(color: Colors.blue[800]),
-                            );
-                          }).toList(),
-                        ),
-                        SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () {
-                                  _showProviderDetails(context, provider);
-                                },
-                                child: Text("View Profile"),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.blue,
-                                  side: BorderSide(color: Colors.blue),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  _bookProvider(context, provider);
-                                },
-                                child: Text("Book Now"),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showProviderDetails(BuildContext context, Map<String, dynamic> provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(16),
-          height: MediaQuery.of(context).size.height * 0.7,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Row(
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    child: Center(
-                      child: Text(
-                        provider['image'],
-                        style: TextStyle(fontSize: 40),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          provider['name'],
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                        Row(
-                          children: [
-                            Icon(Icons.star, color: Colors.amber, size: 20),
-                            Text(
-                              " ${provider['rating']} (${provider['reviews']} reviews)",
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          "${provider['experience']} experience",
-                          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 24),
-              Text(
-                "About",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text(
-                "Experienced ${bookingData.jobName.toLowerCase()} professional with excellent attention to detail. Reliable, punctual, and committed to providing high-quality service.",
-                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-              ),
-              SizedBox(height: 16),
-              Text(
-                "Services & Pricing",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              Text(
-                "• ${provider['price']} XAF per hour",
-                style: TextStyle(fontSize: 16),
-              ),
-              Text(
-                "• Minimum 2 hours booking",
-                style: TextStyle(fontSize: 16),
-              ),
-              Text(
-                "• Free consultation",
-                style: TextStyle(fontSize: 16),
-              ),
-              Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _bookProvider(context, provider);
-                  },
-                  child: Text("Book ${provider['name']}"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.all(16),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _bookProvider(BuildContext context, Map<String, dynamic> provider) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Confirm Booking"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Service Provider: ${provider['name']}"),
-              Text("Service: ${bookingData.jobName}"),
-              Text("Date: ${bookingData.selectedDate.day}/${bookingData.selectedDate.month}/${bookingData.selectedDate.year}"),
-              Text("Time: ${bookingData.selectedTime}"),
-              Text("Duration: ${bookingData.hours} hours"),
-              Text("Location: ${bookingData.location}"),
-              Divider(),
-              Text(
-                "Total Cost: ${provider['price'] * bookingData.hours} XAF",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _showBookingConfirmation(context, provider);
-              },
-              child: Text("Confirm Booking"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showBookingConfirmation(BuildContext context, Map<String, dynamic> provider) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green, size: 32),
-              SizedBox(width: 8),
-              Text("Booking Confirmed!"),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Your booking with ${provider['name']} has been confirmed.",
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 16),
-              Text(
-                "You will receive a call from the service provider within 30 minutes to confirm the details.",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ],
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-                child: Text("Done"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

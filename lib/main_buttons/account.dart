@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:untitled/account_sub/blocked_providers_page.dart';
 import 'package:untitled/account_sub/help_center_page.dart';
 import 'package:untitled/account_sub/invite_friends_page.dart';
@@ -15,12 +16,20 @@ import 'package:untitled/account_sub/verification.dart';
 import 'package:untitled/main_buttons/homepage.dart';
 
 class Account extends StatelessWidget {
-  final Map<String, dynamic> userData;
+  final Map<String, dynamic>? userData;
 
-  const Account({super.key, required this.userData});
+  const Account({super.key, this.userData});
 
   @override
   Widget build(BuildContext context) {
+    final User? user = FirebaseAuth.instance.currentUser;
+
+    // Get the name in priority order
+    final String displayName = userData?['name'] ??
+        user?.displayName ??
+        user?.email?.split('@').first ??
+        'User';
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -55,7 +64,7 @@ class Account extends StatelessWidget {
                             style:
                             TextStyle(fontSize: 16, color: Colors.grey)),
                         Text(
-                          userData['name'] ?? 'Franck',
+                          displayName,
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -85,7 +94,9 @@ class Account extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => PersonalInformationPage(userData: userData)),
+                MaterialPageRoute(
+                    builder: (context) =>
+                        PersonalInformationPage(userData: userData ?? {})),
               );
             },
           ),
@@ -107,7 +118,8 @@ class Account extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const PaymentMethodsPage()),
+                MaterialPageRoute(
+                    builder: (context) => const PaymentMethodsPage()),
               );
             },
           ),
@@ -154,12 +166,12 @@ class Account extends StatelessWidget {
           _buildListTile(
             icon: Icons.person_add,
             title: "Invite Friends",
-            subtitle:
-            "Earn 5% of the amount spent by your friends for life",
+            subtitle: "Earn 5% of the amount spent by your friends for life",
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const InviteFriendsPage()),
+                MaterialPageRoute(
+                    builder: (context) => const InviteFriendsPage()),
               );
             },
           ),
@@ -236,10 +248,10 @@ class Account extends StatelessWidget {
             title: "Blocked Providers",
             subtitle: "See providers you blocked",
             onTap: () {
-
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const BlockedProvidersPage()),
+                MaterialPageRoute(
+                    builder: (context) => const BlockedProvidersPage()),
               );
             },
           ),
@@ -259,10 +271,11 @@ class Account extends StatelessWidget {
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              onPressed: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => Homepage()),
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => Homepage()),
                 );
               },
               child: Row(
