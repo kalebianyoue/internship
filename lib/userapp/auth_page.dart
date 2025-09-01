@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:untitled/userapp/hom.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:untitled/userapp/hom.dart';// your home screen
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -10,12 +11,11 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-  bool showSignUp = false; // Changed to false to start with login page
+  bool showSignUp = false;
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  // Sign Up controllers
   final TextEditingController nameController = TextEditingController();
   final TextEditingController dobController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
@@ -24,6 +24,8 @@ class _AuthPageState extends State<AuthPage> {
 
   bool acceptTerms = false;
 
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> _selectDate(BuildContext context) async {
     DateTime? picked = await showDatePicker(
@@ -48,64 +50,47 @@ class _AuthPageState extends State<AuthPage> {
       return;
     }
 
-    // Basic validation
-    if (emailController.text.trim().isEmpty ||
-        passwordController.text.trim().isEmpty ||
-        nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill in all required fields")),
-      );
-      return;
-    }
-
     try {
-      // Simulate sign up process
-      await Future.delayed(const Duration(seconds: 1));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Account created successfully!")),
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
+
+      // Save user data in Firestore
+      await _firestore.collection("users").doc(userCredential.user!.uid).set({
+        "name": nameController.text.trim(),
+        "dob": dobController.text.trim(),
+        "phone": phoneController.text.trim(),
+        "city": cityController.text.trim(),
+        "email": emailController.text.trim(),
+        "createdAt": DateTime.now(),
+      });
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const Hom(),
-        ),
+        MaterialPageRoute(builder: (context) => const ActivityPage()),
       );
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Sign up failed")),
+        SnackBar(content: Text(e.message ?? "Sign up failed")),
       );
     }
   }
 
   Future<void> signIn() async {
-    // Basic validation
-    if (emailController.text.trim().isEmpty ||
-        passwordController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter email and password")),
-      );
-      return;
-    }
-
     try {
-      // Simulate sign in process
-      await Future.delayed(const Duration(seconds: 1));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Login successful!")),
+      await _auth.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
       );
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const Hom(),
-        ),
+        MaterialPageRoute(builder: (context) => const ActivityPage()),
       );
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Login failed")),
+        SnackBar(content: Text(e.message ?? "Login failed")),
       );
     }
   }
@@ -131,9 +116,7 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 const SizedBox(height: 30),
 
-                // Only show these fields when in sign up mode
                 if (showSignUp) ...[
-                  // Name
                   TextFormField(
                     controller: nameController,
                     decoration: InputDecoration(
@@ -145,8 +128,6 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // DOB
                   TextFormField(
                     controller: dobController,
                     readOnly: true,
@@ -160,8 +141,6 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Phone
                   TextFormField(
                     controller: phoneController,
                     keyboardType: TextInputType.phone,
@@ -176,7 +155,6 @@ class _AuthPageState extends State<AuthPage> {
                   const SizedBox(height: 16),
                 ],
 
-                // Email (always shown)
                 TextFormField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -190,7 +168,6 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // City (only shown in sign up)
                 if (showSignUp) ...[
                   TextFormField(
                     controller: cityController,
@@ -205,7 +182,6 @@ class _AuthPageState extends State<AuthPage> {
                   const SizedBox(height: 16),
                 ],
 
-                // Password (always shown)
                 TextFormField(
                   controller: passwordController,
                   obscureText: true,
@@ -219,7 +195,6 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Confirm Password (only shown in sign up)
                 if (showSignUp) ...[
                   TextFormField(
                     controller: confirmPasswordController,
@@ -233,8 +208,6 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Terms checkbox (only shown in sign up)
                   Row(
                     children: [
                       Checkbox(
@@ -256,11 +229,10 @@ class _AuthPageState extends State<AuthPage> {
                   ),
                   const SizedBox(height: 10),
                 ] else ...[
-                  // Forgot Password (only shown in login)
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (emailController.text.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -269,7 +241,9 @@ class _AuthPageState extends State<AuthPage> {
                           );
                           return;
                         }
-                        // Simulate password reset
+                        await _auth.sendPasswordResetEmail(
+                          email: emailController.text.trim(),
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text("Password reset email sent"),
@@ -284,7 +258,6 @@ class _AuthPageState extends State<AuthPage> {
                   ),
                 ],
 
-                // Action button
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
@@ -311,8 +284,6 @@ class _AuthPageState extends State<AuthPage> {
                 ),
 
                 const SizedBox(height: 20),
-
-                // Toggle between Sign Up & Sign In
                 GestureDetector(
                   onTap: () {
                     setState(() {

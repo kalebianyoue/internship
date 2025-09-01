@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:untitled/main_buttons/chat_screen.dart';
 import 'package:untitled/userapp/accountpage.dart';
 import 'package:untitled/userapp/agendapage.dart';
 import 'package:untitled/userapp/joblist.dart';
-import 'package:untitled/userapp/messagepage.dart';
+
 
 void main() {
   runApp(const Hom());
@@ -33,12 +34,12 @@ class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
 
   // Pages for each bottom navigation item
-  final List<Widget> _pages = const [
-    ActivityPage(),
-    Joblist(),
-    AgendaPage(),
-    Messagepage(userName: ""),
-    AccountPage(),
+  final List<Widget> _pages = [
+    const ActivityPage(),
+    const Joblist(),
+    const AgendaPage(),
+    ChatScreen(),
+    const AccountPage(),
   ];
 
   @override

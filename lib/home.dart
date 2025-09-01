@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:untitled/main_buttons/account.dart';
+import 'package:untitled/main_buttons/chat_screen.dart';
 import 'package:untitled/main_buttons/homepage.dart';
 import 'package:untitled/login.dart';
 import 'package:untitled/main_buttons/chat_list.dart';
@@ -19,7 +20,7 @@ class _HomeState extends State<Home> {
   List pages = [
     Login(),
     Request(),
-    ChatList(),
+    ChatScreen(),
     Account(userData: {},),
   ];
 
