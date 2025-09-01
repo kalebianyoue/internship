@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:untitled/account_sub/become_provider_page.dart';
 import 'package:untitled/account_sub/blocked_providers_page.dart';
 import 'package:untitled/account_sub/help_center_page.dart';
 import 'package:untitled/account_sub/invite_friends_page.dart';
@@ -160,6 +161,19 @@ class Account extends StatelessWidget {
                       builder: (context) => const VerificationScreen()));
             },
           ),
+
+          _buildListTile(
+            icon: Icons.hardware,
+            title: "Become a Service Provider",
+            subtitle: "Become a SP an get work in within location",
+            onTap: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const BecomeProviderPage()));
+            },
+          ),
+
 
           // Product Section
           _buildSectionTitle("Product"),

@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:untitled/home.dart';
 import 'package:untitled/main_buttons/homepage.dart';
 import 'package:untitled/start.dart';
+import 'package:untitled/userapp/steps.dart';
 
 import 'firebase_options.dart';
 
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Homepage(),
+      home: Steps(),
       routes: {
         '/map': (context) => const MapPage(), // new route for OSM
       },
