@@ -2,15 +2,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:untitled/home.dart';
 import 'package:untitled/main_buttons/homepage.dart';
-import 'package:untitled/start.dart';
 import 'package:untitled/userapp/steps.dart';
 
-import 'firebase_options.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'auth_page.dart';
 
 
 void main() async {
@@ -26,7 +20,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const AuthPage(), // Start with AuthPage
+      home: Steps(), // Start with AuthPage
     );
   }
 }

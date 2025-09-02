@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:untitled/userapp/hom.dart';// your home screen
+import 'package:untitled/userapp/hom.dart'; // your home screen
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -25,7 +24,6 @@ class _AuthPageState extends State<AuthPage> {
   bool acceptTerms = false;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> _selectDate(BuildContext context) async {
     DateTime? picked = await showDatePicker(
@@ -51,20 +49,10 @@ class _AuthPageState extends State<AuthPage> {
     }
 
     try {
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+      await _auth.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
-
-      // Save user data in Firestore
-      await _firestore.collection("users").doc(userCredential.user!.uid).set({
-        "name": nameController.text.trim(),
-        "dob": dobController.text.trim(),
-        "phone": phoneController.text.trim(),
-        "city": cityController.text.trim(),
-        "email": emailController.text.trim(),
-        "createdAt": DateTime.now(),
-      });
 
       Navigator.pushReplacement(
         context,
