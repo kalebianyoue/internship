@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:untitled/main_buttons/homepage.dart';
+import 'package:untitled/test.dart';
 import 'package:untitled/userapp/steps.dart';
-
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,10 +19,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Steps(), // Start with AuthPage
+      //home: Homepage()// Corrected from Homep to HomePage
+      home: Homepage(),
     );
   }
 }
+
 class MapPage extends StatelessWidget {
   const MapPage({super.key});
 

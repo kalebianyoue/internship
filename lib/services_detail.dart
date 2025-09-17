@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:flutter_map/flutter_map.dart';
@@ -8,39 +10,114 @@ void main() {
   runApp(ServicesDetail());
 }
 
+class FirebaseService {
+  Future<String> addBooking(BookingData bookingData) async {
+    try {
+      // Save to 'jobs' collection instead of 'bookings'
+      DocumentReference docRef = await FirebaseFirestore.instance
+          .collection('jobs')  // Changed to match your second app
+          .add(bookingData.toMap());
+
+      return docRef.id;
+    } catch (e) {
+      print('Error adding booking: $e');
+      throw e;
+    }
+  }
+}
+
 class BookingData {
+  String? id; // Firestore document ID
   String jobName;
+  String UserId;
   int hours;
   DateTime selectedDate;
   String selectedTime;
   String location;
   String phoneNumber;
   File? workImage;
+  String imageUrl; // URL for the uploaded image
   String description;
   double? latitude;
   double? longitude;
+  double? budgetAmount;
+  String budgetType;
+  DateTime createdAt;
 
   BookingData({
-    this.jobName = 'House',
+    this.id,
+    required this.jobName,
+    required this.UserId,
     this.hours = 2,
     DateTime? selectedDate,
     this.selectedTime = '12:00',
     this.location = '',
     this.phoneNumber = '',
     this.workImage,
+    this.imageUrl = '',
     this.description = '',
     this.latitude,
     this.longitude,
-  }) : selectedDate = selectedDate ?? DateTime.now();
+    this.budgetAmount,
+    this.budgetType = 'none',
+    DateTime? createdAt,
+  }) :
+        selectedDate = selectedDate ?? DateTime.now(),
+        createdAt = createdAt ?? DateTime.now();
+
+  final User? user = FirebaseAuth.instance.currentUser;
+
+  // Convert to Map for Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'jobName': jobName,
+      'UserId': user?.uid ?? UserId,
+      'hours': hours,
+      'selectedDate': selectedDate,
+      'selectedTime': selectedTime,
+      'location': location,
+      'phoneNumber': phoneNumber,
+      'imageUrl': imageUrl,
+      'description': description,
+      'latitude': latitude,
+      'longitude': longitude,
+      'budgetAmount': budgetAmount,
+      'budgetType': budgetType,
+      'createdAt': createdAt,
+    };
+  }
+
+  // Create from Firestore document
+  static BookingData fromMap(Map<String, dynamic> map, String id) {
+    return BookingData(
+      id: id,
+      UserId: map['UserId'] ?? '',
+      jobName: map['jobName'] ?? '',
+      hours: map['hours'] ?? 0,
+      selectedDate: (map['selectedDate'] as Timestamp).toDate(),
+      selectedTime: map['selectedTime'] ?? '',
+      location: map['location'] ?? '',
+      phoneNumber: map['phoneNumber'] ?? '',
+      imageUrl: map['imageUrl'] ?? '',
+      description: map['description'] ?? '',
+      latitude: map['latitude']?.toDouble(),
+      longitude: map['longitude']?.toDouble(),
+      budgetAmount: map['budgetAmount']?.toDouble(),
+      budgetType: map['budgetType'] ?? 'none',
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+    );
+  }
 }
 
 class ServicesDetail extends StatelessWidget {
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+
       title: 'Booking Flow',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: SelectHoursPage(jobName: ''), // Pass job name here
+      home: SelectHoursPage(jobName: "y"  ), // Default job name
     );
   }
 }
@@ -62,7 +139,7 @@ class _SelectHoursPageState extends State<SelectHoursPage> {
   @override
   void initState() {
     super.initState();
-    bookingData = widget.bookingData ?? BookingData(jobName: widget.jobName);
+    bookingData = widget.bookingData ?? BookingData(jobName: widget.jobName, UserId: 'user123');
   }
 
   @override
@@ -77,7 +154,7 @@ class _SelectHoursPageState extends State<SelectHoursPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LinearProgressIndicator(value: 0.16), // Updated for 6 steps
+            LinearProgressIndicator(value: 1/7), // 1 of 7 steps
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -181,7 +258,7 @@ class _SelectDatePageState extends State<SelectDatePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LinearProgressIndicator(value: 0.33),
+            LinearProgressIndicator(value: 2/7), // 2 of 7 steps
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -268,7 +345,7 @@ class _SelectTimePageState extends State<SelectTimePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LinearProgressIndicator(value: 0.50),
+            LinearProgressIndicator(value: 3/7), // 3 of 7 steps
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -359,7 +436,6 @@ class _SelectTimePageState extends State<SelectTimePage> {
 }
 
 // ------------------ PAGE 4: SELECT LOCATION ------------------
-
 class SelectLocationPage extends StatefulWidget {
   final BookingData bookingData;
 
@@ -406,7 +482,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LinearProgressIndicator(value: 0.66),
+            LinearProgressIndicator(value: 4/7), // 4 of 7 steps
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -604,7 +680,7 @@ class _AddImagePageState extends State<AddImagePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LinearProgressIndicator(value: 0.83),
+            LinearProgressIndicator(value: 5/7), // 5 of 7 steps
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -772,7 +848,7 @@ class _DescriptionPageState extends State<DescriptionPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LinearProgressIndicator(value: 1.0),
+            LinearProgressIndicator(value: 6/7), // 6 of 7 steps
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -828,7 +904,7 @@ class _DescriptionPageState extends State<DescriptionPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => SummaryPage(bookingData: widget.bookingData),
+                  builder: (context) => PricingPage(bookingData: widget.bookingData),
                 ),
               );
             },
@@ -840,14 +916,203 @@ class _DescriptionPageState extends State<DescriptionPage> {
   }
 }
 
-// ------------------ PAGE 7: SUMMARY & EDIT ------------------
-class SummaryPage extends StatelessWidget {
+// ------------------ PAGE 7: PRICING (OPTIONAL) ------------------
+class PricingPage extends StatefulWidget {
+  final BookingData bookingData;
+
+  PricingPage({required this.bookingData});
+
+  @override
+  State<PricingPage> createState() => _PricingPageState();
+}
+
+class _PricingPageState extends State<PricingPage> {
+  TextEditingController priceController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.bookingData.budgetAmount != null) {
+      priceController.text =
+          widget.bookingData.budgetAmount!.toStringAsFixed(0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.bookingData.jobName),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LinearProgressIndicator(value: 7/7), // 7 of 7 steps
+
+            // Title
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                "Set your budget (optional)",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+
+            // Info
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "You can suggest a budget. If you leave it empty, service providers will propose their own prices.",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+            ),
+            SizedBox(height: 20),
+
+            // Price input field
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: "Budget (XAF)",
+                  hintText: "e.g. 10000",
+                  prefixText: "XAF ",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                ),
+                onChanged: (value) {
+                  if (value.isNotEmpty) {
+                    widget.bookingData.budgetAmount = double.tryParse(value);
+                  } else {
+                    widget.bookingData.budgetAmount = null;
+                  }
+                },
+              ),
+            ),
+
+            // Suggestion if empty
+            if (priceController.text.isEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  "No budget set. Providers will send you their price offers.",
+                  style: TextStyle(color: Colors.blue[700], fontSize: 14),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+
+      // Next button
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              padding: EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      SummaryPage(bookingData: widget.bookingData),
+                ),
+              );
+            },
+            child: Text("Next",
+                style: TextStyle(fontSize: 18, color: Colors.white)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------ PAGE 8: SUMMARY & EDIT ------------------
+class SummaryPage extends StatefulWidget {
   final BookingData bookingData;
 
   SummaryPage({required this.bookingData});
 
+  @override
+  _SummaryPageState createState() => _SummaryPageState();
+}
+
+class _SummaryPageState extends State<SummaryPage> {
+  final FirebaseService _firebaseService = FirebaseService();
+  bool _isLoading = false;
+  bool _isPosted = false;
+
   String _formatDate(DateTime date) {
     return "${date.day}/${date.month}/${date.year}";
+  }
+
+  String _formatBudget() {
+    if (widget.bookingData.budgetType == 'none' || widget.bookingData.budgetAmount == null) {
+      return "No budget specified";
+    } else if (widget.bookingData.budgetType == 'total') {
+      return "XAF ${widget.bookingData.budgetAmount!.toStringAsFixed(0)} (total)";
+    } else {
+      return "XAF ${widget.bookingData.budgetAmount!.toStringAsFixed(0)} per hour";
+    }
+  }
+
+  Future<void> _postService() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Save booking to Firebase
+      String bookingId = await _firebaseService.addBooking(widget.bookingData);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Booking posted successfully! Service providers will contact you soon.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      setState(() {
+        _isPosted = true;
+      });
+
+      // You can navigate to a confirmation page or back to home
+      // Navigator.pushReplacement(
+      //   context,
+      //   MaterialPageRoute(builder: (context) => ConfirmationPage(bookingId: bookingId)),
+      // );
+
+    } catch (e) {
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error posting service: $e'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -877,93 +1142,155 @@ class SummaryPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildSummaryRow(
+                        context,
                         "Service",
-                        bookingData.jobName,
-                            () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SelectHoursPage(
-                              jobName: bookingData.jobName,
-                              bookingData: bookingData,
+                        widget.bookingData.jobName,
+                            () =>
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    SelectHoursPage(
+                                      jobName: widget.bookingData.jobName,
+                                      bookingData: widget.bookingData,
+                                    ),
+                              ),
                             ),
-                          ),
-                        ),
                       ),
                       Divider(),
                       _buildSummaryRow(
+                        context,
                         "Duration",
-                        "${bookingData.hours}h00",
-                            () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SelectHoursPage(
-                              jobName: bookingData.jobName,
-                              bookingData: bookingData,
+                        "${widget.bookingData.hours}h00",
+                            () =>
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    SelectHoursPage(
+                                      jobName: widget.bookingData.jobName,
+                                      bookingData: widget.bookingData,
+                                    ),
+                              ),
                             ),
-                          ),
-                        ),
                       ),
                       Divider(),
                       _buildSummaryRow(
+                        context,
                         "Date",
-                        _formatDate(bookingData.selectedDate),
-                            () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SelectDatePage(bookingData: bookingData),
-                          ),
-                        ),
+                        _formatDate(widget.bookingData.selectedDate),
+                            () =>
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    SelectDatePage(bookingData: widget.bookingData),
+                              ),
+                            ),
                       ),
                       Divider(),
                       _buildSummaryRow(
+                        context,
                         "Time",
-                        bookingData.selectedTime,
-                            () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SelectTimePage(bookingData: bookingData),
-                          ),
-                        ),
+                        widget.bookingData.selectedTime,
+                            () =>
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    SelectTimePage(bookingData: widget.bookingData),
+                              ),
+                            ),
                       ),
                       Divider(),
                       _buildSummaryRow(
+                        context,
                         "Location",
-                        bookingData.location.isNotEmpty ? bookingData.location :
-                        (bookingData.latitude != null && bookingData.longitude != null
-                            ? "Custom location (${bookingData.latitude!.toStringAsFixed(4)}, ${bookingData.longitude!.toStringAsFixed(4)})"
+                        widget.bookingData.location.isNotEmpty ? widget.bookingData.location :
+                        (widget.bookingData.latitude != null &&
+                            widget.bookingData.longitude != null
+                            ? "Custom location (${widget.bookingData.latitude!
+                            .toStringAsFixed(4)}, ${widget.bookingData.longitude!
+                            .toStringAsFixed(4)})"
                             : "Not selected"),
-                            () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SelectLocationPage(bookingData: bookingData),
-                          ),
-                        ),
+                            () =>
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    SelectLocationPage(
+                                        bookingData: widget.bookingData),
+                              ),
+                            ),
                       ),
                       Divider(),
                       _buildSummaryRow(
+                        context,
                         "Phone",
-                        "+237 ${bookingData.phoneNumber}",
-                            () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SelectLocationPage(bookingData: bookingData),
-                          ),
-                        ),
+                        "+237 ${widget.bookingData.phoneNumber}",
+                            () =>
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    SelectLocationPage(
+                                        bookingData: widget.bookingData),
+                              ),
+                            ),
                       ),
-                      if (bookingData.workImage != null) ...[
+                      if (widget.bookingData.workImage != null) ...[
                         Divider(),
                         _buildImageRow(context),
                       ],
-                      if (bookingData.description.isNotEmpty) ...[
+                      if (widget.bookingData.description.isNotEmpty) ...[
                         Divider(),
                         _buildDescriptionRow(context),
                       ],
+                      Divider(),
+                      _buildSummaryRow(
+                        context,
+                        "Budget",
+                        _formatBudget(),
+                            () =>
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    PricingPage(bookingData: widget.bookingData),
+                              ),
+                            ),
+                      ),
                     ],
                   ),
                 ),
               ),
               SizedBox(height: 30),
-              SizedBox(
+              _isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : _isPosted
+                  ? Center(
+                child: Column(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 50),
+                    SizedBox(height: 16),
+                    Text(
+                      "Service Posted Successfully!",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      "Service providers will contact you soon.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
+              )
+                  : SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -973,15 +1300,14 @@ class SummaryPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: () {
-                    // Navigate to service providers list
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Booking completed! Searching for service providers...')),
-                    );
-                  },
+                  onPressed: _postService,
                   child: Text(
-                    "See Service Providers",
-                    style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                    "Post Service",
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -992,7 +1318,7 @@ class SummaryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryRow(String title, String value, VoidCallback onEdit) {
+  Widget _buildSummaryRow(BuildContext context, String title, String value, VoidCallback onEdit) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -1002,8 +1328,10 @@ class SummaryPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                Text(title,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                Text(value, style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -1026,7 +1354,8 @@ class SummaryPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Work Image", style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                Text("Work Image",
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                 SizedBox(height: 8),
                 Container(
                   height: 80,
@@ -1038,7 +1367,7 @@ class SummaryPage extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.file(
-                      bookingData.workImage!,
+                      widget.bookingData.workImage!,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -1047,12 +1376,14 @@ class SummaryPage extends StatelessWidget {
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => AddImagePage(bookingData: bookingData),
-              ),
-            ),
+            onPressed: () =>
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        AddImagePage(bookingData: widget.bookingData),
+                  ),
+                ),
             child: Text("Edit", style: TextStyle(color: Colors.blue)),
           ),
         ],
@@ -1071,10 +1402,11 @@ class SummaryPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Description", style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                Text("Description",
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                 SizedBox(height: 4),
                 Text(
-                  bookingData.description,
+                  widget.bookingData.description,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
@@ -1083,15 +1415,100 @@ class SummaryPage extends StatelessWidget {
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DescriptionPage(bookingData: bookingData),
-              ),
-            ),
+            onPressed: () =>
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        DescriptionPage(bookingData: widget.bookingData),
+                  ),
+                ),
             child: Text("Edit", style: TextStyle(color: Colors.blue)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ------------------ JOB LIST APPLICATION ------------------
+class JobListApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Job List',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: Joblist(),
+    );
+  }
+}
+
+class Joblist extends StatelessWidget {
+  const Joblist({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          "Job List",
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold
+          ),
+        ),
+        backgroundColor: Colors.blue,
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('jobs').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No job posts available."));
+          }
+
+          final jobs = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: jobs.length,
+            itemBuilder: (context, index) {
+              var job = jobs[index];
+              var jobName = job['jobName'] ?? 'Untitled Job';
+              var description = job['description'] ?? 'No description provided';
+              var location = job['location'] ?? 'Location not specified';
+              var hours = job['hours'] ?? 'Hours not specified';
+              var date = job['selectedDate'] != null
+                  ? (job['selectedDate'] as Timestamp).toDate().toString().substring(0, 10)
+                  : 'Date not specified';
+              var time = job['selectedTime'] ?? 'Time not specified';
+              var phone = job['phoneNumber'] ?? 'Phone not provided';
+
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: ListTile(
+                  title: Text(jobName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(description),
+                      SizedBox(height: 4),
+                      Text("Location: $location"),
+                      Text("Duration: ${hours} hours"),
+                      Text("Date: $date at $time"),
+                      Text("Contact: +237 $phone"),
+                    ],
+                  ),
+                  isThreeLine: true,
+                  leading: const Icon(Icons.work, color: Colors.blue),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

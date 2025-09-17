@@ -3,7 +3,6 @@ import 'package:untitled/userapp/profile_picture_page.dart';
 import 'profile_picture_page.dart';
 import 'skills_page.dart';
 import 'availability_page.dart';
-import 'operating_area_page.dart';
 import 'personal_info_page.dart';
 import 'id_upload_page.dart';
 
@@ -39,12 +38,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         icon: Icons.schedule_outlined,
         page: const AvailabilityPage()
     ),
-    OnboardingStep(
-        title: "Define your operating area",
-        subtitle: "Set your service locations",
-        icon: Icons.location_on_outlined,
-        page: const OperatingAreaPage()
-    ),
+
     OnboardingStep(
         title: "Fill in your personal information",
         subtitle: "Complete your profile details",

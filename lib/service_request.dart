@@ -4,6 +4,7 @@ import 'package:untitled/services_detail.dart';
 class ServiceRequest extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -145,7 +146,8 @@ class SubServicePage extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        ServicesDetail(),
+                        //ServicesDetail(),
+                      SelectHoursPage(jobName: subServices[index], )
                   ),
                 );
               },

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:untitled/home.dart';
 
 class AuthPage extends StatefulWidget {
@@ -10,7 +11,8 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-  bool showSignUp = false; // Changed to false to start with login page
+  bool showSignUp = false;
+  bool _isLoading = false;
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -25,6 +27,7 @@ class _AuthPageState extends State<AuthPage> {
   bool acceptTerms = false;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> _selectDate(BuildContext context) async {
     DateTime? picked = await showDatePicker(
@@ -41,18 +44,67 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
+  // Fonction pour enregistrer les informations utilisateur dans Firestore
+  Future<void> _saveUserDataToFirestore(User user) async {
+    try {
+      final userData = {
+        'uid': user.uid,
+        'email': user.email,
+        'name': nameController.text.trim(),
+        'phone': phoneController.text.trim(),
+        'city': cityController.text.trim(),
+        'dateOfBirth': dobController.text.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'userType': 'client', // Vous pouvez ajouter différents types d'utilisateurs
+        'profileCompleted': true,
+      };
+
+      await _firestore.collection('users').doc(user.uid).set(userData);
+
+      print('User data saved successfully to Firestore');
+    } catch (e) {
+      print('Error saving user data: $e');
+      // Optionnel: vous pouvez rollback la création du compte si l'enregistrement échoue
+      await user.delete();
+      throw Exception('Failed to save user data');
+    }
+  }
+
   Future<void> signUp() async {
     if (passwordController.text != confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Passwords do not match")),
+        const SnackBar(content: Text("Les mots de passe ne correspondent pas")),
       );
       return;
     }
 
+    if (!acceptTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Veuillez accepter les conditions d'utilisation")),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      await _auth.createUserWithEmailAndPassword(
+      // Créer l'utilisateur dans Firebase Auth
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
+      );
+
+      // Enregistrer les informations supplémentaires dans Firestore
+      await _saveUserDataToFirestore(userCredential.user!);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Compte créé avec succès!"),
+          backgroundColor: Colors.green,
+        ),
       );
 
       Navigator.pushReplacement(
@@ -62,19 +114,61 @@ class _AuthPageState extends State<AuthPage> {
         ),
       );
     } on FirebaseAuthException catch (e) {
+      String errorMessage = "Erreur lors de l'inscription";
+
+      if (e.code == 'weak-password') {
+        errorMessage = "Le mot de passe est trop faible";
+      } else if (e.code == 'email-already-in-use') {
+        errorMessage = "Un compte avec cet email existe déjà";
+      } else if (e.code == 'invalid-email') {
+        errorMessage = "Email invalide";
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? "Sign up failed")),
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
       );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Erreur: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   Future<void> signIn() async {
+    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Veuillez remplir tous les champs")),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       await _auth.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Connexion réussie!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -82,16 +176,42 @@ class _AuthPageState extends State<AuthPage> {
         ),
       );
     } on FirebaseAuthException catch (e) {
+      String errorMessage = "Erreur de connexion";
+
+      if (e.code == 'user-not-found') {
+        errorMessage = "Aucun utilisateur trouvé avec cet email";
+      } else if (e.code == 'wrong-password') {
+        errorMessage = "Mot de passe incorrect";
+      } else if (e.code == 'invalid-email') {
+        errorMessage = "Email invalide";
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? "Login failed")),
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
       );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Erreur: ${e.toString()}"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Form(
@@ -100,7 +220,7 @@ class _AuthPageState extends State<AuthPage> {
               children: [
                 const SizedBox(height: 50),
                 Text(
-                  showSignUp ? "Create Account" : "Welcome Back",
+                  showSignUp ? "Créer un compte" : "Connexion",
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 34,
@@ -109,52 +229,65 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 const SizedBox(height: 30),
 
-                // Only show these fields when in sign up mode
                 if (showSignUp) ...[
-                  // Name
                   TextFormField(
                     controller: nameController,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.account_circle),
-                      labelText: "Full Name",
+                      labelText: "Nom complet",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer votre nom';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
 
-                  // DOB
                   TextFormField(
                     controller: dobController,
                     readOnly: true,
                     onTap: () => _selectDate(context),
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.calendar_today),
-                      labelText: "Date of Birth",
+                      labelText: "Date de naissance",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez sélectionner votre date de naissance';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
 
-                  // Phone
                   TextFormField(
                     controller: phoneController,
                     keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.phone),
-                      labelText: "Phone Number",
+                      labelText: "Numéro de téléphone",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer votre numéro de téléphone';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                // Email (always shown)
                 TextFormField(
                   controller: emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -165,54 +298,83 @@ class _AuthPageState extends State<AuthPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Veuillez entrer votre email';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Email invalide';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 
-                // City (only shown in sign up)
                 if (showSignUp) ...[
                   TextFormField(
                     controller: cityController,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.location_city),
-                      labelText: "City",
+                      labelText: "Ville",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez entrer votre ville';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                // Password (always shown)
                 TextFormField(
                   controller: passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.lock),
-                    labelText: "Password",
+                    labelText: "Mot de passe",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Veuillez entrer votre mot de passe';
+                    }
+                    if (value.length < 6) {
+                      return 'Le mot de passe doit contenir au moins 6 caractères';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 16),
 
-                // Confirm Password (only shown in sign up)
                 if (showSignUp) ...[
                   TextFormField(
                     controller: confirmPasswordController,
                     obscureText: true,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.lock_outline),
-                      labelText: "Confirm Password",
+                      labelText: "Confirmer le mot de passe",
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Veuillez confirmer votre mot de passe';
+                      }
+                      if (value != passwordController.text) {
+                        return 'Les mots de passe ne correspondent pas';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 20),
 
-                  // Terms checkbox (only shown in sign up)
                   Row(
                     children: [
                       Checkbox(
@@ -226,7 +388,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                       const Expanded(
                         child: Text(
-                          "I agree to the Terms of Service & Privacy Policy.",
+                          "J'accepte les Conditions d'utilisation et la Politique de confidentialité.",
                           style: TextStyle(fontSize: 14),
                         ),
                       ),
@@ -234,7 +396,6 @@ class _AuthPageState extends State<AuthPage> {
                   ),
                   const SizedBox(height: 10),
                 ] else ...[
-                  // Forgot Password (only shown in login)
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -242,7 +403,7 @@ class _AuthPageState extends State<AuthPage> {
                         if (emailController.text.isEmpty) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text("Enter email to reset password"),
+                              content: Text("Veuillez entrer votre email"),
                             ),
                           );
                           return;
@@ -252,24 +413,25 @@ class _AuthPageState extends State<AuthPage> {
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("Password reset email sent"),
+                            content: Text("Email de réinitialisation envoyé"),
                           ),
                         );
                       },
                       child: const Text(
-                        "Forgot Password?",
+                        "Mot de passe oublié?",
                         style: TextStyle(color: Colors.blueAccent),
                       ),
                     ),
                   ),
                 ],
 
-                // Action button
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: showSignUp
+                    onPressed: _isLoading
+                        ? null
+                        : showSignUp
                         ? (acceptTerms ? signUp : null)
                         : signIn,
                     style: ElevatedButton.styleFrom(
@@ -278,9 +440,10 @@ class _AuthPageState extends State<AuthPage> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      disabledBackgroundColor: Colors.grey,
                     ),
                     child: Text(
-                      showSignUp ? "Sign Up" : "Login",
+                      showSignUp ? "S'inscrire" : "Se connecter",
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -292,24 +455,36 @@ class _AuthPageState extends State<AuthPage> {
 
                 const SizedBox(height: 20),
 
-                // Toggle between Sign Up & Sign In
                 GestureDetector(
-                  onTap: () {
+                  onTap: _isLoading
+                      ? null
+                      : () {
                     setState(() {
                       showSignUp = !showSignUp;
+                      // Réinitialiser les champs
+                      if (!showSignUp) {
+                        nameController.clear();
+                        dobController.clear();
+                        phoneController.clear();
+                        cityController.clear();
+                        confirmPasswordController.clear();
+                        acceptTerms = false;
+                      }
                     });
                   },
                   child: RichText(
                     text: TextSpan(
                       text: showSignUp
-                          ? "Already have an account? "
-                          : "Don't have an account? ",
-                      style: const TextStyle(color: Colors.black87),
+                          ? "Vous avez déjà un compte? "
+                          : "Vous n'avez pas de compte? ",
+                      style: TextStyle(
+                        color: _isLoading ? Colors.grey : Colors.black87,
+                      ),
                       children: [
                         TextSpan(
-                          text: showSignUp ? "Sign In" : "Sign Up",
-                          style: const TextStyle(
-                            color: Colors.blueAccent,
+                          text: showSignUp ? "Se connecter" : "S'inscrire",
+                          style: TextStyle(
+                            color: _isLoading ? Colors.grey : Colors.blueAccent,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -324,5 +499,17 @@ class _AuthPageState extends State<AuthPage> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    nameController.dispose();
+    dobController.dispose();
+    phoneController.dispose();
+    cityController.dispose();
+    confirmPasswordController.dispose();
+    super.dispose();
   }
 }

@@ -262,7 +262,7 @@ class _LoginState extends State<Login> {
                 },
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search, color: Colors.blue),
-                  hintText: "Search Services (e.g., cleaning, plumbing, tutoring...)",
+                  hintText: "Search Services ",
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   suffixIcon: searchQuery.isNotEmpty
@@ -593,7 +593,8 @@ class _LoginState extends State<Login> {
   }
 
   Widget _buildCategoryItem(BuildContext context,
-      {required IconData icon,
+      {
+        required IconData icon,
         required String text,
         required List<String> subServices}) {
     return Card(
@@ -676,7 +677,7 @@ class SubServicePage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ServicesDetail(),
+                    builder: (context) =>SelectHoursPage(jobName: subServices[index],)
                   ),
                 );
               },
