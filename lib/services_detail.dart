@@ -43,6 +43,8 @@ class BookingData {
   double? budgetAmount;
   String budgetType;
   DateTime createdAt;
+  String serviceCategory; // New field for service category
+  String serviceTags; // New field for service tags/keywords
 
   BookingData({
     this.id,
@@ -61,6 +63,8 @@ class BookingData {
     this.budgetAmount,
     this.budgetType = 'none',
     DateTime? createdAt,
+    this.serviceCategory = '',
+    this.serviceTags = '',
   }) :
         selectedDate = selectedDate ?? DateTime.now(),
         createdAt = createdAt ?? DateTime.now();
@@ -84,6 +88,9 @@ class BookingData {
       'budgetAmount': budgetAmount,
       'budgetType': budgetType,
       'createdAt': createdAt,
+      'serviceCategory': serviceCategory,
+      'serviceTags': serviceTags,
+      'status': 'active', // Job status
     };
   }
 
@@ -105,6 +112,8 @@ class BookingData {
       budgetAmount: map['budgetAmount']?.toDouble(),
       budgetType: map['budgetType'] ?? 'none',
       createdAt: (map['createdAt'] as Timestamp).toDate(),
+      serviceCategory: map['serviceCategory'] ?? '',
+      serviceTags: map['serviceTags'] ?? '',
     );
   }
 }
@@ -114,10 +123,250 @@ class ServicesDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-
       title: 'Booking Flow',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: SelectHoursPage(jobName: "y"  ), // Default job name
+      home: ServiceSelectionPage(), // Start with service selection
+    );
+  }
+}
+
+// ------------------ PAGE 0: SERVICE SELECTION ------------------
+class ServiceSelectionPage extends StatefulWidget {
+  @override
+  _ServiceSelectionPageState createState() => _ServiceSelectionPageState();
+}
+
+class _ServiceSelectionPageState extends State<ServiceSelectionPage> {
+  final List<Map<String, dynamic>> services = [
+    {
+      'name': 'House Cleaning',
+      'icon': Icons.cleaning_services,
+      'category': 'Home Services',
+      'description': 'Deep cleaning, regular cleaning, post-construction cleanup'
+    },
+    {
+      'name': 'Plumbing',
+      'icon': Icons.plumbing,
+      'category': 'Home Repairs',
+      'description': 'Pipe repairs, installations, leak fixes, drain cleaning'
+    },
+    {
+      'name': 'Electrical Work',
+      'icon': Icons.electrical_services,
+      'category': 'Home Repairs',
+      'description': 'Wiring, installations, repairs, electrical maintenance'
+    },
+    {
+      'name': 'Carpentry',
+      'icon': Icons.construction,
+      'category': 'Home Repairs',
+      'description': 'Furniture assembly, repairs, custom woodwork'
+    },
+    {
+      'name': 'Painting',
+      'icon': Icons.format_paint,
+      'category': 'Home Improvement',
+      'description': 'Interior/exterior painting, wall preparation, touch-ups'
+    },
+    {
+      'name': 'Gardening',
+      'icon': Icons.grass,
+      'category': 'Outdoor Services',
+      'description': 'Lawn care, landscaping, plant maintenance, weeding'
+    },
+    {
+      'name': 'Moving Help',
+      'icon': Icons.local_shipping,
+      'category': 'Transportation',
+      'description': 'Packing, loading, transportation, unpacking services'
+    },
+    {
+      'name': 'Tutoring',
+      'icon': Icons.school,
+      'category': 'Education',
+      'description': 'Academic support, language lessons, skill training'
+    },
+    {
+      'name': 'Computer Repair',
+      'icon': Icons.computer,
+      'category': 'Technology',
+      'description': 'Hardware repairs, software installation, troubleshooting'
+    },
+    {
+      'name': 'Pet Care',
+      'icon': Icons.pets,
+      'category': 'Pet Services',
+      'description': 'Walking, feeding, grooming, pet sitting'
+    },
+    {
+      'name': 'Laundry Service',
+      'icon': Icons.local_laundry_service,
+      'category': 'Home Services',
+      'description': 'Washing, drying, ironing, dry cleaning'
+    },
+    {
+      'name': 'Other',
+      'icon': Icons.more_horiz,
+      'category': 'Custom',
+      'description': 'Describe your custom service needs'
+    },
+  ];
+
+  String searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
+    List<Map<String, dynamic>> filteredServices = services.where((service) {
+      return service['name'].toLowerCase().contains(searchQuery.toLowerCase()) ||
+          service['category'].toLowerCase().contains(searchQuery.toLowerCase()) ||
+          service['description'].toLowerCase().contains(searchQuery.toLowerCase());
+    }).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Select a Service'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          // Search bar
+          Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search for services...',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(25),
+                  borderSide: BorderSide.none,
+                ),
+                prefixIcon: Icon(Icons.search, color: Colors.grey),
+                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  searchQuery = value;
+                });
+              },
+            ),
+          ),
+
+          // Services grid
+          Expanded(
+            child: GridView.builder(
+              padding: EdgeInsets.all(16),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.85,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              itemCount: filteredServices.length,
+              itemBuilder: (context, index) {
+                final service = filteredServices[index];
+                return ServiceCard(
+                  service: service,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SelectHoursPage(
+                          jobName: service['name'],
+                          serviceCategory: service['category'],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ServiceCard extends StatelessWidget {
+  final Map<String, dynamic> service;
+  final VoidCallback onTap;
+
+  const ServiceCard({Key? key, required this.service, required this.onTap}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: Icon(
+                  service['icon'],
+                  color: Colors.blue,
+                  size: 28,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                service['name'],
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: 4),
+              Text(
+                service['category'],
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: 8),
+              Expanded(
+                child: Text(
+                  service['description'],
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -125,9 +374,10 @@ class ServicesDetail extends StatelessWidget {
 // ------------------ PAGE 1: SELECT HOURS ------------------
 class SelectHoursPage extends StatefulWidget {
   final String jobName;
+  final String? serviceCategory;
   final BookingData? bookingData;
 
-  SelectHoursPage({required this.jobName, this.bookingData});
+  SelectHoursPage({required this.jobName, this.serviceCategory, this.bookingData});
 
   @override
   _SelectHoursPageState createState() => _SelectHoursPageState();
@@ -139,7 +389,11 @@ class _SelectHoursPageState extends State<SelectHoursPage> {
   @override
   void initState() {
     super.initState();
-    bookingData = widget.bookingData ?? BookingData(jobName: widget.jobName, UserId: 'user123');
+    bookingData = widget.bookingData ?? BookingData(
+      jobName: widget.jobName,
+      UserId: 'user123',
+      serviceCategory: widget.serviceCategory ?? '',
+    );
   }
 
   @override
@@ -157,9 +411,19 @@ class _SelectHoursPageState extends State<SelectHoursPage> {
             LinearProgressIndicator(value: 1/7), // 1 of 7 steps
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text(
-                bookingData.jobName.toUpperCase(),
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    bookingData.jobName.toUpperCase(),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  ),
+                  if (bookingData.serviceCategory.isNotEmpty)
+                    Text(
+                      bookingData.serviceCategory,
+                      style: TextStyle(fontSize: 14, color: Colors.blue[700]),
+                    ),
+                ],
               ),
             ),
             Padding(
@@ -167,6 +431,13 @@ class _SelectHoursPageState extends State<SelectHoursPage> {
               child: Text(
                 "How many hours of work?",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                "Estimate the time needed for this service",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ),
             Spacer(),
@@ -186,9 +457,17 @@ class _SelectHoursPageState extends State<SelectHoursPage> {
                   child: Icon(Icons.remove, size: 30, color: Colors.white),
                 ),
                 SizedBox(width: 30),
-                Text(
-                  "${bookingData.hours}h00",
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                Column(
+                  children: [
+                    Text(
+                      "${bookingData.hours}h00",
+                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "hours",
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    ),
+                  ],
                 ),
                 SizedBox(width: 30),
                 FloatingActionButton(
@@ -271,6 +550,13 @@ class _SelectDatePageState extends State<SelectDatePage> {
               child: Text(
                 "Which day is best for you?",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                "Select your preferred date for the service",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ),
             Expanded(
@@ -358,6 +644,13 @@ class _SelectTimePageState extends State<SelectTimePage> {
               child: Text(
                 "What time is best for you?",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                "Choose your preferred time slot",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ),
             SizedBox(height: 20),
@@ -497,6 +790,13 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                "Provide your location and contact information",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+            ),
             SizedBox(height: 20),
             Expanded(
               child: SingleChildScrollView(
@@ -624,7 +924,7 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AddImagePage(bookingData: widget.bookingData),
+                        builder: (context) => PricingPage(bookingData: widget.bookingData),
                       ),
                     );
                   }
@@ -640,7 +940,371 @@ class _SelectLocationPageState extends State<SelectLocationPage> {
   }
 }
 
-// ------------------ PAGE 5: ADD IMAGE ------------------
+// ------------------ PAGE 5: PRICING (IMPROVED) ------------------
+class PricingPage extends StatefulWidget {
+  final BookingData bookingData;
+
+  PricingPage({required this.bookingData});
+
+  @override
+  State<PricingPage> createState() => _PricingPageState();
+}
+
+class _PricingPageState extends State<PricingPage> {
+  TextEditingController priceController = TextEditingController();
+  String selectedBudgetType = 'none';
+  bool showPriceInput = false;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedBudgetType = widget.bookingData.budgetType;
+    showPriceInput = selectedBudgetType != 'none';
+
+    if (widget.bookingData.budgetAmount != null) {
+      priceController.text = widget.bookingData.budgetAmount!.toStringAsFixed(0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.bookingData.jobName),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LinearProgressIndicator(value: 5/7), // 5 of 7 steps
+
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                widget.bookingData.jobName.toUpperCase(),
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "Set your budget preference",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                "Choose how you'd like to handle pricing for this service",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+            ),
+
+            SizedBox(height: 20),
+
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    // Option 1: Let service providers set price
+                    Card(
+                      elevation: selectedBudgetType == 'none' ? 3 : 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: selectedBudgetType == 'none' ? Colors.blue : Colors.grey[300]!,
+                          width: selectedBudgetType == 'none' ? 2 : 1,
+                        ),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          setState(() {
+                            selectedBudgetType = 'none';
+                            showPriceInput = false;
+                            widget.bookingData.budgetType = 'none';
+                            widget.bookingData.budgetAmount = null;
+                            priceController.clear();
+                          });
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Radio<String>(
+                                value: 'none',
+                                groupValue: selectedBudgetType,
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedBudgetType = value!;
+                                    showPriceInput = false;
+                                    widget.bookingData.budgetType = 'none';
+                                    widget.bookingData.budgetAmount = null;
+                                    priceController.clear();
+                                  });
+                                },
+                                activeColor: Colors.blue,
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Let Service Providers Quote",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: selectedBudgetType == 'none' ? Colors.blue : Colors.black,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      "Service providers will send you their price proposals. You can compare and choose the best offer.",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chat_bubble_outline,
+                                color: selectedBudgetType == 'none' ? Colors.blue : Colors.grey,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 16),
+
+                    // Option 2: Set your own budget
+                    Card(
+                      elevation: selectedBudgetType != 'none' ? 3 : 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: selectedBudgetType != 'none' ? Colors.blue : Colors.grey[300]!,
+                          width: selectedBudgetType != 'none' ? 2 : 1,
+                        ),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          setState(() {
+                            selectedBudgetType = 'total';
+                            showPriceInput = true;
+                            widget.bookingData.budgetType = 'total';
+                          });
+                        },
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Radio<String>(
+                                value: 'total',
+                                groupValue: selectedBudgetType,
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedBudgetType = value!;
+                                    showPriceInput = true;
+                                    widget.bookingData.budgetType = 'total';
+                                  });
+                                },
+                                activeColor: Colors.blue,
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Set My Budget",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: selectedBudgetType != 'none' ? Colors.blue : Colors.black,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      "Specify your budget range. Service providers will know your price expectations upfront.",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.attach_money,
+                                color: selectedBudgetType != 'none' ? Colors.blue : Colors.grey,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 20),
+
+                    // Price input field (shown when budget option is selected)
+                    AnimatedContainer(
+                      duration: Duration(milliseconds: 300),
+                      height: showPriceInput ? null : 0,
+                      child: showPriceInput ? Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Your Budget Amount",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              SizedBox(height: 12),
+                              TextField(
+                                controller: priceController,
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  labelText: "Budget (XAF)",
+                                  hintText: "e.g. 15000",
+                                  prefixText: "XAF ",
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  suffixIcon: priceController.text.isNotEmpty
+                                      ? IconButton(
+                                    icon: Icon(Icons.clear),
+                                    onPressed: () {
+                                      priceController.clear();
+                                      widget.bookingData.budgetAmount = null;
+                                    },
+                                  )
+                                      : null,
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value.isNotEmpty) {
+                                      widget.bookingData.budgetAmount = double.tryParse(value);
+                                    } else {
+                                      widget.bookingData.budgetAmount = null;
+                                    }
+                                  });
+                                },
+                              ),
+                              if (priceController.text.isNotEmpty) ...[
+                                SizedBox(height: 8),
+                                Container(
+                                  padding: EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          "Your budget: XAF ${priceController.text} for ${widget.bookingData.hours} hours of ${widget.bookingData.jobName.toLowerCase()}",
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.blue[800],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ) : SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (selectedBudgetType == 'none')
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_outline, color: Colors.green, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "Price will be determined by Service Providers",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.green[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding: EdgeInsets.all(16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddImagePage(bookingData: widget.bookingData),
+                    ),
+                  );
+                },
+                child: Text("Next", style: TextStyle(fontSize: 18, color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------ PAGE 6: ADD IMAGE ------------------
 class AddImagePage extends StatefulWidget {
   final BookingData bookingData;
 
@@ -680,7 +1344,7 @@ class _AddImagePageState extends State<AddImagePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LinearProgressIndicator(value: 5/7), // 5 of 7 steps
+            LinearProgressIndicator(value: 6/7), // 6 of 7 steps
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -695,6 +1359,13 @@ class _AddImagePageState extends State<AddImagePage> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                "A photo helps service providers understand your needs better",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+            ),
             SizedBox(height: 20),
             Expanded(
               child: Padding(
@@ -703,14 +1374,14 @@ class _AddImagePageState extends State<AddImagePage> {
                   children: [
                     if (widget.bookingData.workImage != null) ...[
                       Container(
-                        height: 200,
+                        height: 250,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.grey[300]!),
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                           child: Image.file(
                             widget.bookingData.workImage!,
                             fit: BoxFit.cover,
@@ -718,37 +1389,67 @@ class _AddImagePageState extends State<AddImagePage> {
                         ),
                       ),
                       SizedBox(height: 20),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            widget.bookingData.workImage = null;
-                          });
-                        },
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        label: Text("Remove Image", style: TextStyle(color: Colors.red)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          side: BorderSide(color: Colors.red),
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _pickImage(ImageSource.camera),
+                              icon: Icon(Icons.camera_alt),
+                              label: Text("Retake"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  widget.bookingData.workImage = null;
+                                });
+                              },
+                              icon: Icon(Icons.delete, color: Colors.red),
+                              label: Text("Remove", style: TextStyle(color: Colors.red)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                side: BorderSide(color: Colors.red),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ] else ...[
                       Container(
-                        height: 200,
+                        height: 250,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
                           color: Colors.grey[50],
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_photo_alternate, size: 48, color: Colors.grey[400]),
-                            SizedBox(height: 10),
+                            Icon(Icons.add_photo_alternate, size: 64, color: Colors.grey[400]),
+                            SizedBox(height: 16),
                             Text(
                               "Add a photo to help\nservice providers understand your needs",
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey[600]),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 16,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              "(Optional)",
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
                           ],
                         ),
@@ -760,10 +1461,11 @@ class _AddImagePageState extends State<AddImagePage> {
                             child: ElevatedButton.icon(
                               onPressed: () => _pickImage(ImageSource.camera),
                               icon: Icon(Icons.camera_alt),
-                              label: Text("Camera"),
+                              label: Text("Take Photo"),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue,
                                 foregroundColor: Colors.white,
+                                padding: EdgeInsets.all(16),
                               ),
                             ),
                           ),
@@ -772,10 +1474,11 @@ class _AddImagePageState extends State<AddImagePage> {
                             child: ElevatedButton.icon(
                               onPressed: () => _pickImage(ImageSource.gallery),
                               icon: Icon(Icons.photo_library),
-                              label: Text("Gallery"),
+                              label: Text("From Gallery"),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blue,
                                 foregroundColor: Colors.white,
+                                padding: EdgeInsets.all(16),
                               ),
                             ),
                           ),
@@ -817,7 +1520,7 @@ class _AddImagePageState extends State<AddImagePage> {
   }
 }
 
-// ------------------ PAGE 6: DESCRIPTION ------------------
+// ------------------ PAGE 7: DESCRIPTION ------------------
 class DescriptionPage extends StatefulWidget {
   final BookingData bookingData;
 
@@ -848,7 +1551,7 @@ class _DescriptionPageState extends State<DescriptionPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LinearProgressIndicator(value: 6/7), // 6 of 7 steps
+            LinearProgressIndicator(value: 7/7), // 7 of 7 steps
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -863,6 +1566,13 @@ class _DescriptionPageState extends State<DescriptionPage> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                "Provide details to help service providers understand exactly what you need",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+            ),
             SizedBox(height: 20),
             Expanded(
               child: Padding(
@@ -873,9 +1583,9 @@ class _DescriptionPageState extends State<DescriptionPage> {
                   expands: true,
                   textAlignVertical: TextAlignVertical.top,
                   decoration: InputDecoration(
-                    hintText: "Provide details about the work you need done...\n\nExample: I need deep cleaning of my 3-bedroom apartment including kitchen, bathrooms, and living areas. Please bring your own supplies.",
+                    hintText: "Provide details about the work you need done...\n\nExample: I need deep cleaning of my 3-bedroom apartment including kitchen, bathrooms, and living areas. Please bring your own supplies and focus on areas that haven't been cleaned in a while.",
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     contentPadding: EdgeInsets.all(16),
                   ),
@@ -904,11 +1614,11 @@ class _DescriptionPageState extends State<DescriptionPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => PricingPage(bookingData: widget.bookingData),
+                  builder: (context) => SummaryPage(bookingData: widget.bookingData),
                 ),
               );
             },
-            child: Text("Next", style: TextStyle(fontSize: 18, color: Colors.white)),
+            child: Text("Review & Post", style: TextStyle(fontSize: 18, color: Colors.white)),
           ),
         ),
       ),
@@ -916,133 +1626,7 @@ class _DescriptionPageState extends State<DescriptionPage> {
   }
 }
 
-// ------------------ PAGE 7: PRICING (OPTIONAL) ------------------
-class PricingPage extends StatefulWidget {
-  final BookingData bookingData;
-
-  PricingPage({required this.bookingData});
-
-  @override
-  State<PricingPage> createState() => _PricingPageState();
-}
-
-class _PricingPageState extends State<PricingPage> {
-  TextEditingController priceController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.bookingData.budgetAmount != null) {
-      priceController.text =
-          widget.bookingData.budgetAmount!.toStringAsFixed(0);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.bookingData.jobName),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            LinearProgressIndicator(value: 7/7), // 7 of 7 steps
-
-            // Title
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                "Set your budget (optional)",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-
-            // Info
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "You can suggest a budget. If you leave it empty, service providers will propose their own prices.",
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-            ),
-            SizedBox(height: 20),
-
-            // Price input field
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: "Budget (XAF)",
-                  hintText: "e.g. 10000",
-                  prefixText: "XAF ",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                ),
-                onChanged: (value) {
-                  if (value.isNotEmpty) {
-                    widget.bookingData.budgetAmount = double.tryParse(value);
-                  } else {
-                    widget.bookingData.budgetAmount = null;
-                  }
-                },
-              ),
-            ),
-
-            // Suggestion if empty
-            if (priceController.text.isEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  "No budget set. Providers will send you their price offers.",
-                  style: TextStyle(color: Colors.blue[700], fontSize: 14),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-
-      // Next button
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              padding: EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      SummaryPage(bookingData: widget.bookingData),
-                ),
-              );
-            },
-            child: Text("Next",
-                style: TextStyle(fontSize: 18, color: Colors.white)),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ------------------ PAGE 8: SUMMARY & EDIT ------------------
+// ------------------ PAGE 8: IMPROVED SUMMARY & EDIT ------------------
 class SummaryPage extends StatefulWidget {
   final BookingData bookingData;
 
@@ -1058,16 +1642,32 @@ class _SummaryPageState extends State<SummaryPage> {
   bool _isPosted = false;
 
   String _formatDate(DateTime date) {
-    return "${date.day}/${date.month}/${date.year}";
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return "${date.day} ${months[date.month - 1]} ${date.year}";
   }
 
   String _formatBudget() {
     if (widget.bookingData.budgetType == 'none' || widget.bookingData.budgetAmount == null) {
-      return "No budget specified";
-    } else if (widget.bookingData.budgetType == 'total') {
-      return "XAF ${widget.bookingData.budgetAmount!.toStringAsFixed(0)} (total)";
+      return "To be determined by Service Provider";
     } else {
-      return "XAF ${widget.bookingData.budgetAmount!.toStringAsFixed(0)} per hour";
+      return "XAF ${widget.bookingData.budgetAmount!.toStringAsFixed(0)}";
+    }
+  }
+
+  Color _getBudgetColor() {
+    if (widget.bookingData.budgetType == 'none' || widget.bookingData.budgetAmount == null) {
+      return Colors.orange;
+    } else {
+      return Colors.green;
+    }
+  }
+
+  IconData _getBudgetIcon() {
+    if (widget.bookingData.budgetType == 'none' || widget.bookingData.budgetAmount == null) {
+      return Icons.schedule;
+    } else {
+      return Icons.attach_money;
     }
   }
 
@@ -1083,9 +1683,18 @@ class _SummaryPageState extends State<SummaryPage> {
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Booking posted successfully! Service providers will contact you soon.'),
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Service posted successfully! Service providers will contact you soon.'),
+              ),
+            ],
+          ),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
+          duration: Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
         ),
       );
 
@@ -1093,19 +1702,24 @@ class _SummaryPageState extends State<SummaryPage> {
         _isPosted = true;
       });
 
-      // You can navigate to a confirmation page or back to home
-      // Navigator.pushReplacement(
-      //   context,
-      //   MaterialPageRoute(builder: (context) => ConfirmationPage(bookingId: bookingId)),
-      // );
+      // Auto navigate back to home after success
+      Future.delayed(Duration(seconds: 2), () {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      });
 
     } catch (e) {
-      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error posting service: $e'),
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(child: Text('Error posting service: $e')),
+            ],
+          ),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
@@ -1119,7 +1733,7 @@ class _SummaryPageState extends State<SummaryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Booking Summary"),
+        title: Text("Review Your Booking"),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
@@ -1129,187 +1743,404 @@ class _SummaryPageState extends State<SummaryPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Review Your Booking",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              // Header
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue.shade50, Colors.blue.shade100],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.work_outline, color: Colors.blue, size: 28),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            widget.bookingData.jobName,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[800],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (widget.bookingData.serviceCategory.isNotEmpty) ...[
+                      SizedBox(height: 8),
+                      Text(
+                        widget.bookingData.serviceCategory,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.blue[600],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
+
               SizedBox(height: 20),
+
+              // Service Details Card
               Card(
-                elevation: 2,
+                elevation: 3,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildSummaryRow(
-                        context,
-                        "Service",
-                        widget.bookingData.jobName,
-                            () =>
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    SelectHoursPage(
-                                      jobName: widget.bookingData.jobName,
-                                      bookingData: widget.bookingData,
-                                    ),
-                              ),
-                            ),
+                      Text(
+                        "Service Details",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
+                        ),
                       ),
-                      Divider(),
-                      _buildSummaryRow(
-                        context,
-                        "Duration",
-                        "${widget.bookingData.hours}h00",
-                            () =>
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    SelectHoursPage(
-                                      jobName: widget.bookingData.jobName,
-                                      bookingData: widget.bookingData,
-                                    ),
-                              ),
+                      SizedBox(height: 16),
+
+                      _buildDetailRow(
+                        icon: Icons.access_time,
+                        title: "Duration",
+                        value: "${widget.bookingData.hours} hour${widget.bookingData.hours > 1 ? 's' : ''}",
+                        onEdit: () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SelectHoursPage(
+                              jobName: widget.bookingData.jobName,
+                              serviceCategory: widget.bookingData.serviceCategory,
+                              bookingData: widget.bookingData,
                             ),
+                          ),
+                        ),
                       ),
-                      Divider(),
-                      _buildSummaryRow(
-                        context,
-                        "Date",
-                        _formatDate(widget.bookingData.selectedDate),
-                            () =>
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    SelectDatePage(bookingData: widget.bookingData),
-                              ),
-                            ),
+
+                      Divider(height: 24),
+
+                      _buildDetailRow(
+                        icon: Icons.calendar_today,
+                        title: "Date & Time",
+                        value: "${_formatDate(widget.bookingData.selectedDate)} at ${widget.bookingData.selectedTime}",
+                        onEdit: () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SelectDatePage(bookingData: widget.bookingData),
+                          ),
+                        ),
                       ),
-                      Divider(),
-                      _buildSummaryRow(
-                        context,
-                        "Time",
-                        widget.bookingData.selectedTime,
-                            () =>
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    SelectTimePage(bookingData: widget.bookingData),
-                              ),
-                            ),
-                      ),
-                      Divider(),
-                      _buildSummaryRow(
-                        context,
-                        "Location",
-                        widget.bookingData.location.isNotEmpty ? widget.bookingData.location :
-                        (widget.bookingData.latitude != null &&
-                            widget.bookingData.longitude != null
-                            ? "Custom location (${widget.bookingData.latitude!
-                            .toStringAsFixed(4)}, ${widget.bookingData.longitude!
-                            .toStringAsFixed(4)})"
+
+                      Divider(height: 24),
+
+                      _buildDetailRow(
+                        icon: Icons.location_on,
+                        title: "Location",
+                        value: widget.bookingData.location.isNotEmpty ? widget.bookingData.location :
+                        (widget.bookingData.latitude != null && widget.bookingData.longitude != null
+                            ? "Custom location selected"
                             : "Not selected"),
-                            () =>
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    SelectLocationPage(
-                                        bookingData: widget.bookingData),
-                              ),
-                            ),
+                        onEdit: () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SelectLocationPage(bookingData: widget.bookingData),
+                          ),
+                        ),
                       ),
-                      Divider(),
-                      _buildSummaryRow(
-                        context,
-                        "Phone",
-                        "+237 ${widget.bookingData.phoneNumber}",
-                            () =>
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    SelectLocationPage(
-                                        bookingData: widget.bookingData),
-                              ),
-                            ),
+
+                      Divider(height: 24),
+
+                      _buildDetailRow(
+                        icon: Icons.phone,
+                        title: "Contact",
+                        value: "+237 ${widget.bookingData.phoneNumber}",
+                        onEdit: () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SelectLocationPage(bookingData: widget.bookingData),
+                          ),
+                        ),
                       ),
-                      if (widget.bookingData.workImage != null) ...[
-                        Divider(),
-                        _buildImageRow(context),
-                      ],
-                      if (widget.bookingData.description.isNotEmpty) ...[
-                        Divider(),
-                        _buildDescriptionRow(context),
-                      ],
-                      Divider(),
-                      _buildSummaryRow(
-                        context,
-                        "Budget",
-                        _formatBudget(),
-                            () =>
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    PricingPage(bookingData: widget.bookingData),
-                              ),
-                            ),
+
+                      Divider(height: 24),
+
+                      _buildDetailRow(
+                        icon: _getBudgetIcon(),
+                        title: "Budget",
+                        value: _formatBudget(),
+                        valueColor: _getBudgetColor(),
+                        onEdit: () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PricingPage(bookingData: widget.bookingData),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              SizedBox(height: 30),
+
+              SizedBox(height: 16),
+
+              // Image Card (if image is added)
+              if (widget.bookingData.workImage != null) ...[
+                Card(
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.image, color: Colors.blue),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Work Area Image",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AddImagePage(bookingData: widget.bookingData),
+                                ),
+                              ),
+                              child: Text("Edit", style: TextStyle(color: Colors.blue)),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              widget.bookingData.workImage!,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+              ],
+
+              // Description Card (if description is provided)
+              if (widget.bookingData.description.isNotEmpty) ...[
+                Card(
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.description, color: Colors.blue),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Description",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DescriptionPage(bookingData: widget.bookingData),
+                                ),
+                              ),
+                              child: Text("Edit", style: TextStyle(color: Colors.blue)),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 12),
+                        Container(
+                          padding: EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: Text(
+                            widget.bookingData.description,
+                            style: TextStyle(
+                              fontSize: 16,
+                              height: 1.5,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 30),
+              ] else ...[
+                SizedBox(height: 30),
+              ],
+
+              // Post button or success message
               _isLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : _isPosted
                   ? Center(
                 child: Column(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.green, size: 50),
+                    CircularProgressIndicator(),
                     SizedBox(height: 16),
                     Text(
-                      "Service Posted Successfully!",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      "Service providers will contact you soon.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16),
+                      "Posting your service...",
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                     ),
                   ],
                 ),
               )
-                  : SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: EdgeInsets.all(16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onPressed: _postService,
-                  child: Text(
-                    "Post Service",
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  : _isPosted
+                  ? Container(
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.green.shade200),
                 ),
+                child: Column(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 64),
+                    SizedBox(height: 16),
+                    Text(
+                      "Service Posted Successfully!",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[800],
+                      ),
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      "Service providers in your area will contact you soon. You'll receive notifications when they send proposals.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.green[700],
+                        height: 1.5,
+                      ),
+                    ),
+                    SizedBox(height: 20),
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.green[800]),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              "Returning to home page...",
+                              style: TextStyle(
+                                color: Colors.green[800],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+                  : Column(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.blue[700]),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "Ready to post? Service providers will see your request and send you proposals.",
+                            style: TextStyle(
+                              color: Colors.blue[700],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        padding: EdgeInsets.all(18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 3,
+                      ),
+                      onPressed: _postService,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.send, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text(
+                            "Post My Service Request",
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -1318,115 +2149,46 @@ class _SummaryPageState extends State<SummaryPage> {
     );
   }
 
-  Widget _buildSummaryRow(BuildContext context, String title, String value, VoidCallback onEdit) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                Text(value, style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w500)),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: onEdit,
-            child: Text("Edit", style: TextStyle(color: Colors.blue)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImageRow(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Work Image",
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                SizedBox(height: 8),
-                Container(
-                  height: 80,
-                  width: 80,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.file(
-                      widget.bookingData.workImage!,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+  Widget _buildDetailRow({
+    required IconData icon,
+    required String title,
+    required String value,
+    Color? valueColor,
+    required VoidCallback onEdit,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.blue, size: 20),
+        SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () =>
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        AddImagePage(bookingData: widget.bookingData),
-                  ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: valueColor ?? Colors.grey[800],
                 ),
-            child: Text("Edit", style: TextStyle(color: Colors.blue)),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDescriptionRow(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Description",
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                SizedBox(height: 4),
-                Text(
-                  widget.bookingData.description,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () =>
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        DescriptionPage(bookingData: widget.bookingData),
-                  ),
-                ),
-            child: Text("Edit", style: TextStyle(color: Colors.blue)),
-          ),
-        ],
-      ),
+        ),
+        TextButton(
+          onPressed: onEdit,
+          child: Text("Edit", style: TextStyle(color: Colors.blue)),
+        ),
+      ],
     );
   }
 }
@@ -1446,12 +2208,24 @@ class JobListApp extends StatelessWidget {
 class Joblist extends StatelessWidget {
   const Joblist({super.key});
 
+  String _formatDate(DateTime date) {
+    return "${date.day}/${date.month}/${date.year}";
+  }
+
+  String _formatBudget(Map<String, dynamic> job) {
+    if (job['budgetType'] == 'none' || job['budgetAmount'] == null) {
+      return "To be determined by SP";
+    } else {
+      return "Budget: XAF ${job['budgetAmount'].toStringAsFixed(0)}";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          "Job List",
+          "Available Jobs",
           style: TextStyle(
               color: Colors.white,
               fontSize: 20,
@@ -1459,57 +2233,340 @@ class Joblist extends StatelessWidget {
           ),
         ),
         backgroundColor: Colors.blue,
+        elevation: 2,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('jobs').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('jobs')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text("Loading available jobs..."),
+                ],
+              ),
+            );
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No job posts available."));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.work_off, size: 64, color: Colors.grey[400]),
+                  SizedBox(height: 16),
+                  Text(
+                    "No job requests available",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "Check back later for new opportunities",
+                    style: TextStyle(color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            );
           }
 
           final jobs = snapshot.data!.docs;
 
           return ListView.builder(
+            padding: EdgeInsets.all(16),
             itemCount: jobs.length,
             itemBuilder: (context, index) {
               var job = jobs[index];
-              var jobName = job['jobName'] ?? 'Untitled Job';
-              var description = job['description'] ?? 'No description provided';
-              var location = job['location'] ?? 'Location not specified';
-              var hours = job['hours'] ?? 'Hours not specified';
-              var date = job['selectedDate'] != null
-                  ? (job['selectedDate'] as Timestamp).toDate().toString().substring(0, 10)
+              var data = job.data() as Map<String, dynamic>;
+
+              var jobName = data['jobName'] ?? 'Untitled Job';
+              var description = data['description'] ?? 'No description provided';
+              var location = data['location'] ?? 'Location not specified';
+              var hours = data['hours'] ?? 'Hours not specified';
+              var date = data['selectedDate'] != null
+                  ? _formatDate((data['selectedDate'] as Timestamp).toDate())
                   : 'Date not specified';
-              var time = job['selectedTime'] ?? 'Time not specified';
-              var phone = job['phoneNumber'] ?? 'Phone not provided';
+              var time = data['selectedTime'] ?? 'Time not specified';
+              var phone = data['phoneNumber'] ?? 'Phone not provided';
+              var serviceCategory = data['serviceCategory'] ?? '';
+              var createdAt = data['createdAt'] != null
+                  ? (data['createdAt'] as Timestamp).toDate()
+                  : DateTime.now();
+
+              // Calculate how long ago the job was posted
+              var timeAgo = DateTime.now().difference(createdAt).inHours;
+              String timeAgoText = timeAgo < 1
+                  ? "Just posted"
+                  : timeAgo < 24
+                  ? "${timeAgo}h ago"
+                  : "${timeAgo ~/ 24}d ago";
 
               return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: ListTile(
-                  title: Text(jobName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Column(
+                margin: const EdgeInsets.only(bottom: 16),
+                elevation: 3,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(description),
-                      SizedBox(height: 4),
-                      Text("Location: $location"),
-                      Text("Duration: ${hours} hours"),
-                      Text("Date: $date at $time"),
-                      Text("Contact: +237 $phone"),
+                      // Header with job title and time
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(Icons.work_outline, color: Colors.blue, size: 24),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  jobName,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                                if (serviceCategory.isNotEmpty) ...[
+                                  SizedBox(height: 4),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      serviceCategory,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.blue[700],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                timeAgoText,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Container(
+                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  "ACTIVE",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.green[700],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // Description
+                      if (description != 'No description provided') ...[
+                        Text(
+                          description,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                            height: 1.4,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 16),
+                      ],
+
+                      // Job details in a grid-like layout
+                      Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInfoItem(
+                                    icon: Icons.access_time,
+                                    label: "Duration",
+                                    value: "$hours hrs",
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildInfoItem(
+                                    icon: Icons.calendar_today,
+                                    label: "Date",
+                                    value: date,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInfoItem(
+                                    icon: Icons.schedule,
+                                    label: "Time",
+                                    value: time,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildInfoItem(
+                                    icon: Icons.location_on,
+                                    label: "Location",
+                                    value: location,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildInfoItem(
+                                    icon: Icons.phone,
+                                    label: "Contact",
+                                    value: "+237 $phone",
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _buildInfoItem(
+                                    icon: data['budgetType'] == 'none'
+                                        ? Icons.schedule
+                                        : Icons.attach_money,
+                                    label: "Budget",
+                                    value: _formatBudget(data),
+                                    valueColor: data['budgetType'] == 'none'
+                                        ? Colors.orange[700]
+                                        : Colors.green[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(height: 16),
+
+                      // Action button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () {
+                            // Handle contact action
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Contact feature coming soon!"),
+                                backgroundColor: Colors.blue,
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.send, color: Colors.white, size: 18),
+                          label: Text(
+                            "Send Proposal",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  isThreeLine: true,
-                  leading: const Icon(Icons.work, color: Colors.blue),
                 ),
               );
             },
           );
         },
       ),
+    );
+  }
+
+  Widget _buildInfoItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.blue),
+        SizedBox(width: 6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: valueColor ?? Colors.grey[800],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
