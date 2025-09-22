@@ -19,7 +19,7 @@ class _HomeState extends State<Home> {
   int currentIndex = 0;
   List pages = [
     Login(),
-    Request(),
+    MainTabsScreen(),
     ChatScreen(),
     Account(userData: {},),
   ];

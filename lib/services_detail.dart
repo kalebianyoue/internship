@@ -13,9 +13,9 @@ void main() {
 class FirebaseService {
   Future<String> addBooking(BookingData bookingData) async {
     try {
-      // Save to 'jobs' collection instead of 'bookings'
+      // Save to 'jobs' collection
       DocumentReference docRef = await FirebaseFirestore.instance
-          .collection('jobs')  // Changed to match your second app
+          .collection('jobs')
           .add(bookingData.toMap());
 
       return docRef.id;
@@ -23,6 +23,51 @@ class FirebaseService {
       print('Error adding booking: $e');
       throw e;
     }
+  }
+
+  // Get all jobs for the current user
+  Stream<QuerySnapshot> getUserJobs(String userId) {
+    return FirebaseFirestore.instance
+        .collection('jobs')
+        .where('UserId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  // Update job status (accept/decline)
+  Future<void> updateJobStatus(String jobId, String status, String providerId, String providerName) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('jobs')
+          .doc(jobId)
+          .update({
+        'status': status,
+        'acceptedBy': providerId,
+        'acceptedByName': providerName,
+        'acceptedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error updating job status: $e');
+      throw e;
+    }
+  }
+
+  // Get all available jobs for service providers
+  Stream<QuerySnapshot> getAvailableJobs() {
+    return FirebaseFirestore.instance
+        .collection('jobs')
+        .where('status', isEqualTo: 'active')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  // Get jobs accepted by a specific provider
+  Stream<QuerySnapshot> getProviderJobs(String providerId) {
+    return FirebaseFirestore.instance
+        .collection('jobs')
+        .where('acceptedBy', isEqualTo: providerId)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
   }
 }
 
@@ -43,8 +88,12 @@ class BookingData {
   double? budgetAmount;
   String budgetType;
   DateTime createdAt;
-  String serviceCategory; // New field for service category
-  String serviceTags; // New field for service tags/keywords
+  String serviceCategory;
+  String serviceTags;
+  String status; // active, accepted, declined, completed
+  String? acceptedBy; // Provider ID who accepted the job
+  String? acceptedByName; // Provider name who accepted the job
+  DateTime? acceptedAt; // When the job was accepted
 
   BookingData({
     this.id,
@@ -65,6 +114,10 @@ class BookingData {
     DateTime? createdAt,
     this.serviceCategory = '',
     this.serviceTags = '',
+    this.status = 'active',
+    this.acceptedBy,
+    this.acceptedByName,
+    this.acceptedAt,
   }) :
         selectedDate = selectedDate ?? DateTime.now(),
         createdAt = createdAt ?? DateTime.now();
@@ -90,7 +143,10 @@ class BookingData {
       'createdAt': createdAt,
       'serviceCategory': serviceCategory,
       'serviceTags': serviceTags,
-      'status': 'active', // Job status
+      'status': status,
+      'acceptedBy': acceptedBy,
+      'acceptedByName': acceptedByName,
+      'acceptedAt': acceptedAt,
     };
   }
 
@@ -114,22 +170,71 @@ class BookingData {
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       serviceCategory: map['serviceCategory'] ?? '',
       serviceTags: map['serviceTags'] ?? '',
+      status: map['status'] ?? 'active',
+      acceptedBy: map['acceptedBy'],
+      acceptedByName: map['acceptedByName'],
+      acceptedAt: map['acceptedAt'] != null ? (map['acceptedAt'] as Timestamp).toDate() : null,
     );
   }
 }
 
 class ServicesDetail extends StatelessWidget {
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Booking Flow',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: ServiceSelectionPage(), // Start with service selection
+      home: HomePage(), // Start with home page that has tabs
     );
   }
 }
 
+// ------------------ HOME PAGE WITH TABS ------------------
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  int _selectedIndex = 0;
+  final List<Widget> _pages = [
+    ServiceSelectionPage(),
+    MyRequestsPage(),
+    ProviderJobsPage(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _pages[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Services',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list_alt),
+            label: 'My Requests',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.work),
+            label: 'Provider Jobs',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue,
+        onTap: _onItemTapped,
+      ),
+    );
+  }
+}
 // ------------------ PAGE 0: SERVICE SELECTION ------------------
 class ServiceSelectionPage extends StatefulWidget {
   @override
@@ -975,39 +1080,39 @@ class _PricingPageState extends State<PricingPage> {
         foregroundColor: Colors.white,
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            LinearProgressIndicator(value: 5/7), // 5 of 7 steps
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LinearProgressIndicator(value: 5/7), // 5 of 7 steps
 
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                widget.bookingData.jobName.toUpperCase(),
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  widget.bookingData.jobName.toUpperCase(),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                ),
               ),
-            ),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "Set your budget preference",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  "Set your budget preference",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                "Choose how you'd like to handle pricing for this service",
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  "Choose how you'd like to handle pricing for this service",
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
               ),
-            ),
 
-            SizedBox(height: 20),
+              SizedBox(height: 20),
 
-            Expanded(
-              child: Padding(
+              Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
@@ -1241,8 +1346,8 @@ class _PricingPageState extends State<PricingPage> {
                   ],
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
 
@@ -1341,34 +1446,34 @@ class _AddImagePageState extends State<AddImagePage> {
         foregroundColor: Colors.white,
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            LinearProgressIndicator(value: 6/7), // 6 of 7 steps
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                widget.bookingData.jobName.toUpperCase(),
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LinearProgressIndicator(value: 6/7), // 6 of 7 steps
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  widget.bookingData.jobName.toUpperCase(),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "Add a picture of the work area (optional)",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  "Add a picture of the work area (optional)",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                "A photo helps service providers understand your needs better",
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  "A photo helps service providers understand your needs better",
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
               ),
-            ),
-            SizedBox(height: 20),
-            Expanded(
-              child: Padding(
+              SizedBox(height: 20),
+              Padding(
                 padding: EdgeInsets.all(16),
                 child: Column(
                   children: [
@@ -1488,32 +1593,32 @@ class _AddImagePageState extends State<AddImagePage> {
                   ],
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: EdgeInsets.all(16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DescriptionPage(bookingData: widget.bookingData),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      padding: EdgeInsets.all(16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    );
-                  },
-                  child: Text("Next", style: TextStyle(fontSize: 18, color: Colors.white)),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DescriptionPage(bookingData: widget.bookingData),
+                        ),
+                      );
+                    },
+                    child: Text("Next", style: TextStyle(fontSize: 18, color: Colors.white)),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1548,77 +1653,80 @@ class _DescriptionPageState extends State<DescriptionPage> {
         foregroundColor: Colors.white,
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            LinearProgressIndicator(value: 7/7), // 7 of 7 steps
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                widget.bookingData.jobName.toUpperCase(),
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "Describe the work",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                "Provide details to help service providers understand exactly what you need",
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              ),
-            ),
-            SizedBox(height: 20),
-            Expanded(
-              child: Padding(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LinearProgressIndicator(value: 7/7), // 7 of 7 steps
+              Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: TextField(
-                  controller: descriptionController,
-                  maxLines: null,
-                  expands: true,
-                  textAlignVertical: TextAlignVertical.top,
-                  decoration: InputDecoration(
-                    hintText: "Provide details about the work you need done...\n\nExample: I need deep cleaning of my 3-bedroom apartment including kitchen, bathrooms, and living areas. Please bring your own supplies and focus on areas that haven't been cleaned in a while.",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                child: Text(
+                  widget.bookingData.jobName.toUpperCase(),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  "Describe the work",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  "Provide details to help service providers understand exactly what you need",
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+              ),
+              SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Container(
+                  height: 250,
+                  child: TextField(
+                    controller: descriptionController,
+                    maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    decoration: InputDecoration(
+                      hintText: "Provide details about the work you need done...\n\nExample: I need deep cleaning of my 3-bedroom apartment including kitchen, bathrooms, and living areas. Please bring your own supplies and focus on areas that haven't been cleaned in a while.",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: EdgeInsets.all(16),
                     ),
-                    contentPadding: EdgeInsets.all(16),
+                    onChanged: (value) {
+                      widget.bookingData.description = value;
+                    },
                   ),
-                  onChanged: (value) {
-                    widget.bookingData.description = value;
-                  },
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              padding: EdgeInsets.all(16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SummaryPage(bookingData: widget.bookingData),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      padding: EdgeInsets.all(16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SummaryPage(bookingData: widget.bookingData),
+                        ),
+                      );
+                    },
+                    child: Text("Review & Post", style: TextStyle(fontSize: 18, color: Colors.white)),
+                  ),
                 ),
-              );
-            },
-            child: Text("Review & Post", style: TextStyle(fontSize: 18, color: Colors.white)),
+              ),
+            ],
           ),
         ),
       ),
@@ -1767,7 +1875,6 @@ class _SummaryPageState extends State<SummaryPage> {
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[800],
                             ),
                           ),
                         ),
@@ -1779,7 +1886,7 @@ class _SummaryPageState extends State<SummaryPage> {
                         widget.bookingData.serviceCategory,
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.blue[600],
+                          color: Colors.blue[700],
                         ),
                       ),
                     ],
@@ -2192,66 +2299,33 @@ class _SummaryPageState extends State<SummaryPage> {
     );
   }
 }
-
-// ------------------ JOB LIST APPLICATION ------------------
-class JobListApp extends StatelessWidget {
+// ------------------ NEW PAGE: MY REQUESTS PAGE ------------------
+class MyRequestsPage extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Job List',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: Joblist(),
-    );
-  }
+  _MyRequestsPageState createState() => _MyRequestsPageState();
 }
 
-class Joblist extends StatelessWidget {
-  const Joblist({super.key});
-
-  String _formatDate(DateTime date) {
-    return "${date.day}/${date.month}/${date.year}";
-  }
-
-  String _formatBudget(Map<String, dynamic> job) {
-    if (job['budgetType'] == 'none' || job['budgetAmount'] == null) {
-      return "To be determined by SP";
-    } else {
-      return "Budget: XAF ${job['budgetAmount'].toStringAsFixed(0)}";
-    }
-  }
+class _MyRequestsPageState extends State<MyRequestsPage> {
+  final FirebaseService _firebaseService = FirebaseService();
+  final User? user = FirebaseAuth.instance.currentUser;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Available Jobs",
-          style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold
-          ),
-        ),
+        title: Text('My Service Requests'),
         backgroundColor: Colors.blue,
-        elevation: 2,
+        foregroundColor: Colors.white,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('jobs')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
+        stream: _firebaseService.getUserJobs(user?.uid ?? ''),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text("Loading available jobs..."),
-                ],
-              ),
-            );
+            return Center(child: CircularProgressIndicator());
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -2259,314 +2333,602 @@ class Joblist extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.work_off, size: 64, color: Colors.grey[400]),
+                  Icon(Icons.list_alt, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
                   Text(
-                    "No job requests available",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[600],
-                    ),
+                    'No service requests yet',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    "Check back later for new opportunities",
-                    style: TextStyle(color: Colors.grey[500]),
+                    'Post a service request to get started',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                 ],
               ),
             );
           }
 
-          final jobs = snapshot.data!.docs;
-
           return ListView.builder(
             padding: EdgeInsets.all(16),
-            itemCount: jobs.length,
+            itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              var job = jobs[index];
-              var data = job.data() as Map<String, dynamic>;
+              var doc = snapshot.data!.docs[index];
+              BookingData booking = BookingData.fromMap(doc.data() as Map<String, dynamic>, doc.id);
 
-              var jobName = data['jobName'] ?? 'Untitled Job';
-              var description = data['description'] ?? 'No description provided';
-              var location = data['location'] ?? 'Location not specified';
-              var hours = data['hours'] ?? 'Hours not specified';
-              var date = data['selectedDate'] != null
-                  ? _formatDate((data['selectedDate'] as Timestamp).toDate())
-                  : 'Date not specified';
-              var time = data['selectedTime'] ?? 'Time not specified';
-              var phone = data['phoneNumber'] ?? 'Phone not provided';
-              var serviceCategory = data['serviceCategory'] ?? '';
-              var createdAt = data['createdAt'] != null
-                  ? (data['createdAt'] as Timestamp).toDate()
-                  : DateTime.now();
-
-              // Calculate how long ago the job was posted
-              var timeAgo = DateTime.now().difference(createdAt).inHours;
-              String timeAgoText = timeAgo < 1
-                  ? "Just posted"
-                  : timeAgo < 24
-                  ? "${timeAgo}h ago"
-                  : "${timeAgo ~/ 24}d ago";
-
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                elevation: 3,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header with job title and time
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(Icons.work_outline, color: Colors.blue, size: 24),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  jobName,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[800],
-                                  ),
-                                ),
-                                if (serviceCategory.isNotEmpty) ...[
-                                  SizedBox(height: 4),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      serviceCategory,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.blue[700],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                timeAgoText,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                              SizedBox(height: 4),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  "ACTIVE",
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.green[700],
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-
-                      SizedBox(height: 16),
-
-                      // Description
-                      if (description != 'No description provided') ...[
-                        Text(
-                          description,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                            height: 1.4,
-                          ),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 16),
-                      ],
-
-                      // Job details in a grid-like layout
-                      Container(
-                        padding: EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildInfoItem(
-                                    icon: Icons.access_time,
-                                    label: "Duration",
-                                    value: "$hours hrs",
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _buildInfoItem(
-                                    icon: Icons.calendar_today,
-                                    label: "Date",
-                                    value: date,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildInfoItem(
-                                    icon: Icons.schedule,
-                                    label: "Time",
-                                    value: time,
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _buildInfoItem(
-                                    icon: Icons.location_on,
-                                    label: "Location",
-                                    value: location,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildInfoItem(
-                                    icon: Icons.phone,
-                                    label: "Contact",
-                                    value: "+237 $phone",
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _buildInfoItem(
-                                    icon: data['budgetType'] == 'none'
-                                        ? Icons.schedule
-                                        : Icons.attach_money,
-                                    label: "Budget",
-                                    value: _formatBudget(data),
-                                    valueColor: data['budgetType'] == 'none'
-                                        ? Colors.orange[700]
-                                        : Colors.green[700],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      SizedBox(height: 16),
-
-                      // Action button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            padding: EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: () {
-                            // Handle contact action
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text("Contact feature coming soon!"),
-                                backgroundColor: Colors.blue,
-                              ),
-                            );
-                          },
-                          icon: Icon(Icons.send, color: Colors.white, size: 18),
-                          label: Text(
-                            "Send Proposal",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
+              return RequestCard(booking: booking);
             },
           );
         },
       ),
     );
   }
+}
 
-  Widget _buildInfoItem({
-    required IconData icon,
-    required String label,
-    required String value,
-    Color? valueColor,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: Colors.blue),
-        SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w500,
+class RequestCard extends StatelessWidget {
+  final BookingData booking;
+
+  const RequestCard({Key? key, required this.booking}) : super(key: key);
+
+  String _formatDate(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return "${date.day} ${months[date.month - 1]} ${date.year}";
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'active':
+        return Colors.orange;
+      case 'accepted':
+        return Colors.green;
+      case 'declined':
+        return Colors.red;
+      case 'completed':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'active':
+        return Icons.access_time;
+      case 'accepted':
+        return Icons.check_circle;
+      case 'declined':
+        return Icons.cancel;
+      case 'completed':
+        return Icons.done_all;
+      default:
+        return Icons.help;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 3,
+      margin: EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  booking.jobName,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(booking.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _getStatusColor(booking.status)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(_getStatusIcon(booking.status),
+                          size: 16,
+                          color: _getStatusColor(booking.status)),
+                      SizedBox(width: 4),
+                      Text(
+                        booking.status.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: _getStatusColor(booking.status),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              booking.serviceCategory,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            SizedBox(height: 12),
+            Divider(),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 16, color: Colors.grey),
+                SizedBox(width: 8),
+                Text(
+                  "${_formatDate(booking.selectedDate)} at ${booking.selectedTime}",
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.timer, size: 16, color: Colors.grey),
+                SizedBox(width: 8),
+                Text(
+                  "${booking.hours} hour${booking.hours > 1 ? 's' : ''}",
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.location_on, size: 16, color: Colors.grey),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    booking.location,
+                    style: TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            if (booking.acceptedByName != null) ...[
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.person, size: 16, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text(
+                    "Accepted by: ${booking.acceptedByName}",
+                    style: TextStyle(fontSize: 14, color: Colors.green),
+                  ),
+                ],
               ),
+            ],
+            if (booking.description.isNotEmpty) ...[
+              SizedBox(height: 12),
               Text(
-                value,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: valueColor ?? Colors.grey[800],
-                ),
-                maxLines: 1,
+                booking.description,
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------ NEW PAGE: PROVIDER JOBS PAGE ------------------
+class ProviderJobsPage extends StatefulWidget {
+  @override
+  _ProviderJobsPageState createState() => _ProviderJobsPageState();
+}
+
+class _ProviderJobsPageState extends State<ProviderJobsPage> {
+  final FirebaseService _firebaseService = FirebaseService();
+  final User? user = FirebaseAuth.instance.currentUser;
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Available Jobs'),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          bottom: TabBar(
+            tabs: [
+              Tab(text: 'Available Jobs'),
+              Tab(text: 'My Jobs'),
+            ],
           ),
         ),
-      ],
+        body: TabBarView(
+          children: [
+            // Available Jobs Tab
+            StreamBuilder<QuerySnapshot>(
+              stream: _firebaseService.getAvailableJobs(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.work_outline, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'No available jobs',
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Check back later for new service requests',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: EdgeInsets.all(16),
+                  itemCount: snapshot.data!.docs.length,
+                  itemBuilder: (context, index) {
+                    var doc = snapshot.data!.docs[index];
+                    BookingData booking = BookingData.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+
+                    return AvailableJobCard(booking: booking);
+                  },
+                );
+              },
+            ),
+
+            // My Jobs Tab
+            StreamBuilder<QuerySnapshot>(
+              stream: _firebaseService.getProviderJobs(user?.uid ?? ''),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.work_outline, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'No accepted jobs',
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Accept jobs from the Available Jobs tab',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: EdgeInsets.all(16),
+                  itemCount: snapshot.data!.docs.length,
+                  itemBuilder: (context, index) {
+                    var doc = snapshot.data!.docs[index];
+                    BookingData booking = BookingData.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+
+                    return AcceptedJobCard(booking: booking);
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AvailableJobCard extends StatelessWidget {
+  final BookingData booking;
+  final FirebaseService _firebaseService = FirebaseService();
+  final User? user = FirebaseAuth.instance.currentUser;
+
+  AvailableJobCard({Key? key, required this.booking}) : super(key: key);
+
+  String _formatDate(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return "${date.day} ${months[date.month - 1]} ${date.year}";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 3,
+      margin: EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              booking.jobName,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 4),
+            Text(
+              booking.serviceCategory,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            SizedBox(height: 12),
+            Divider(),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 16, color: Colors.grey),
+                SizedBox(width: 8),
+                Text(
+                  "${_formatDate(booking.selectedDate)} at ${booking.selectedTime}",
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.timer, size: 16, color: Colors.grey),
+                SizedBox(width: 8),
+                Text(
+                  "${booking.hours} hour${booking.hours > 1 ? 's' : ''}",
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.location_on, size: 16, color: Colors.grey),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    booking.location,
+                    style: TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            if (booking.budgetAmount != null) ...[
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.attach_money, size: 16, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text(
+                    "Budget: XAF ${booking.budgetAmount!.toStringAsFixed(0)}",
+                    style: TextStyle(fontSize: 14, color: Colors.green),
+                  ),
+                ],
+              ),
+            ],
+            if (booking.description.isNotEmpty) ...[
+              SizedBox(height: 12),
+              Text(
+                booking.description,
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      // Decline job
+                      _firebaseService.updateJobStatus(
+                        booking.id!,
+                        'declined',
+                        user?.uid ?? '',
+                        user?.displayName ?? 'Provider',
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Job declined')),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: BorderSide(color: Colors.red),
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Text('Decline'),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Accept job
+                      _firebaseService.updateJobStatus(
+                        booking.id!,
+                        'accepted',
+                        user?.uid ?? '',
+                        user?.displayName ?? 'Provider',
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Job accepted!')),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Text('Accept'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AcceptedJobCard extends StatelessWidget {
+  final BookingData booking;
+
+  const AcceptedJobCard({Key? key, required this.booking}) : super(key: key);
+
+  String _formatDate(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return "${date.day} ${months[date.month - 1]} ${date.year}";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 3,
+      margin: EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  booking.jobName,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.green),
+                  ),
+                  child: Text(
+                    "ACCEPTED",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 4),
+            Text(
+              booking.serviceCategory,
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            SizedBox(height: 12),
+            Divider(),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 16, color: Colors.grey),
+                SizedBox(width: 8),
+                Text(
+                  "${_formatDate(booking.selectedDate)} at ${booking.selectedTime}",
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.timer, size: 16, color: Colors.grey),
+                SizedBox(width: 8),
+                Text(
+                  "${booking.hours} hour${booking.hours > 1 ? 's' : ''}",
+                  style: TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.location_on, size: 16, color: Colors.grey),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    booking.location,
+                    style: TextStyle(fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            if (booking.budgetAmount != null) ...[
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.attach_money, size: 16, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text(
+                    "Budget: XAF ${booking.budgetAmount!.toStringAsFixed(0)}",
+                    style: TextStyle(fontSize: 14, color: Colors.green),
+                  ),
+                ],
+              ),
+            ],
+            if (booking.description.isNotEmpty) ...[
+              SizedBox(height: 12),
+              Text(
+                booking.description,
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                // Mark as completed
+                // You would need to add this functionality to FirebaseService
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Mark as completed functionality would be implemented here')),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                minimumSize: Size(double.infinity, 48),
+              ),
+              child: Text('Mark as Completed'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
