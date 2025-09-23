@@ -10,10 +10,18 @@ class ChatList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (currentUser == null) {
+      return const Scaffold(
+        body: Center(child: Text("Aucun utilisateur connecté")),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Messages",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Messages",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.blueAccent,
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -23,8 +31,12 @@ class ChatList extends StatelessWidget {
             .orderBy("lastMessageTime", descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("Aucun message"));
           }
 
           final chats = snapshot.data!.docs;
@@ -32,29 +44,39 @@ class ChatList extends StatelessWidget {
           return ListView.builder(
             itemCount: chats.length,
             itemBuilder: (context, index) {
-              final chat = chats[index].data() as Map<String, dynamic>;
+              final chatDoc = chats[index];
+              final chat = chatDoc.data() as Map<String, dynamic>?;
+
+              if (chat == null || chat["participants"] == null) {
+                return const SizedBox.shrink();
+              }
+
               final participants = List<String>.from(chat["participants"]);
               final otherUserId =
               participants.firstWhere((id) => id != currentUser!.uid);
 
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
-                    .collection("users") // ou "providers"
+                    .collection("provider") // ⚠️ adapte si tu stockes aussi dans "providers"
                     .doc(otherUserId)
                     .get(),
                 builder: (context, userSnapshot) {
-                  if (!userSnapshot.hasData) {
+                  if (userSnapshot.connectionState == ConnectionState.waiting) {
                     return const ListTile(title: Text("Chargement..."));
                   }
 
+                  if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                    return const ListTile(title: Text("Utilisateur introuvable"));
+                  }
+
                   final userData =
-                  userSnapshot.data!.data() as Map<String, dynamic>;
+                      userSnapshot.data!.data() as Map<String, dynamic>? ?? {};
                   final name = userData["name"] ?? "Unknown";
 
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.blueAccent,
-                      child: Text(name[0]),
+                      child: Text(name.isNotEmpty ? name[0] : "?"),
                     ),
                     title: Text(name),
                     subtitle: Text(chat["lastMessage"] ?? ""),
