@@ -1,8 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:untitled/main_buttons/listpost.dart';
 import 'package:untitled/service_request.dart';
 import 'package:untitled/services_detail.dart';
 import 'package:untitled/userapp/chat_screen.dart';
+
+import 'chat_page.dart';
 
 void main() => runApp(MyApp());
 
@@ -241,7 +245,7 @@ class _RequestScreen extends State<RequestScreen> {
 }
 
 class Joblist extends StatelessWidget {
-  const Joblist({super.key});
+   Joblist({super.key});
 
   String _formatDate(DateTime date) {
     return "${date.day}/${date.month}/${date.year}";
@@ -254,6 +258,8 @@ class Joblist extends StatelessWidget {
       return "XAF ${job['budgetAmount'].toStringAsFixed(0)}";
     }
   }
+  final User? user = FirebaseAuth.instance.currentUser;
+
 
   @override
   Widget build(BuildContext context) {
@@ -261,6 +267,7 @@ class Joblist extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('jobs')
+            .where('UserId', isEqualTo: user?.uid )
             .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
@@ -309,12 +316,14 @@ class Joblist extends StatelessWidget {
             itemCount: jobs.length,
             itemBuilder: (context, index) {
               var job = jobs[index];
+              final jobId = job.id;
               var data = job.data() as Map<String, dynamic>;
 
               var jobName = data['jobName'] ?? 'Untitled Job';
               var description = data['description'] ?? 'No description provided';
               var location = data['location'] ?? 'Location not specified';
               var hours = data['hours'] ?? 'Hours not specified';
+              var status = data['status'] ?? '???error';
               var date = data['selectedDate'] != null
                   ? _formatDate((data['selectedDate'] as Timestamp).toDate())
                   : 'Date not specified';
@@ -406,7 +415,7 @@ class Joblist extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  "ACTIVE",
+                                  status.toString().toUpperCase(),
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: Colors.green[700],
@@ -523,18 +532,16 @@ class Joblist extends StatelessWidget {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
+
                           onPressed: () {
                             // Handle contact action
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text("Contact feature coming soon!"),
-                                backgroundColor: Colors.blue,
-                              ),
-                            );
+                            data['acceptedBy'] == null ? Navigator.push(context, MaterialPageRoute(builder: (context)=>Listpost(JobId: jobId,))) : Navigator.push(context, MaterialPageRoute(builder: (context)=>ChatPage(Name: data['acceptedByName'], providerId: data['acceptedBy'], clientId: user!.uid,)));
+
+
                           },
                           icon: Icon(Icons.send, color: Colors.white, size: 18),
                           label: Text(
-                            "Send Proposal",
+                            data['acceptedBy'] == null ? "Accept List" : " Chat with ${data['acceptedByName']}",
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,

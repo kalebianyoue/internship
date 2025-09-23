@@ -4,6 +4,7 @@ import 'package:untitled/userapp/accountpage.dart';
 import 'package:untitled/userapp/agendapage.dart';
 import 'package:untitled/userapp/joblist.dart';
 
+import '../main_buttons/chat_list.dart';
 
 void main() {
   runApp(const Hom());
@@ -22,7 +23,6 @@ class Hom extends StatelessWidget {
   }
 }
 
-/// Main Page with Bottom Navigation
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
 
@@ -33,48 +33,53 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
 
-  // Pages for each bottom navigation item
   final List<Widget> _pages = [
     const ActivityPage(),
     const Joblist(),
     const AgendaPage(),
-    ChatScreen(),
+    ChatList(),
     const AccountPage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.grey,
-        onTap: (index) {
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: _pages[_selectedIndex],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-        items: const [
-          BottomNavigationBarItem(
+        indicatorColor: Colors.blue.withOpacity(0.2),
+        destinations: const [
+          NavigationDestination(
             icon: Icon(Icons.work_outline),
+            selectedIcon: Icon(Icons.work, color: Colors.blue),
             label: "Activity",
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list_alt),
+          NavigationDestination(
+            icon: Icon(Icons.list_alt_outlined),
+            selectedIcon: Icon(Icons.list_alt, color: Colors.blue),
             label: "Job List",
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event_note),
+          NavigationDestination(
+            icon: Icon(Icons.event_note_outlined),
+            selectedIcon: Icon(Icons.event_note, color: Colors.blue),
             label: "Agenda",
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.message_outlined),
+            selectedIcon: Icon(Icons.message, color: Colors.blue),
             label: "Messages",
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person, color: Colors.blue),
             label: "Account",
           ),
         ],
@@ -82,6 +87,7 @@ class _MainPageState extends State<MainPage> {
     );
   }
 }
+
 
 ////////////////////////////////////
 /// 1. Activity Page

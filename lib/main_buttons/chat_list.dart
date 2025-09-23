@@ -1,43 +1,87 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'chat_page.dart';
 
 class ChatList extends StatelessWidget {
-  const ChatList({super.key});
+  final currentUser = FirebaseAuth.instance.currentUser;
+
+  ChatList({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, String>> chats = [
-      {"name": "Alice", "lastMessage": "Hey! How are you?", "time": "10:30 AM"},
-      {"name": "Bob", "lastMessage": "See you tomorrow.", "time": "09:15 AM"},
-      {"name": "Charlie", "lastMessage": "Let’s catch up soon!", "time": "Yesterday"},
-    ];
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Messages",style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),
+        title: const Text("Messages",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blueAccent,
       ),
-      body: ListView.builder(
-        itemCount: chats.length,
-        itemBuilder: (context, index) {
-          final chat = chats[index];
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.blueAccent,
-              child: Text(chat["name"]![0]),
-            ),
-            title: Text(chat["name"]!),
-            subtitle: Text(chat["lastMessage"]!),
-            trailing: Text(
-              chat["time"]!,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ChatPage(receiverName: chat["name"]!),
-                ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection("chats")
+            .where("participants", arrayContains: currentUser!.uid)
+            .orderBy("lastMessageTime", descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final chats = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: chats.length,
+            itemBuilder: (context, index) {
+              final chat = chats[index].data() as Map<String, dynamic>;
+              final participants = List<String>.from(chat["participants"]);
+              final otherUserId =
+              participants.firstWhere((id) => id != currentUser!.uid);
+
+              return FutureBuilder<DocumentSnapshot>(
+                future: FirebaseFirestore.instance
+                    .collection("users") // ou "providers"
+                    .doc(otherUserId)
+                    .get(),
+                builder: (context, userSnapshot) {
+                  if (!userSnapshot.hasData) {
+                    return const ListTile(title: Text("Chargement..."));
+                  }
+
+                  final userData =
+                  userSnapshot.data!.data() as Map<String, dynamic>;
+                  final name = userData["name"] ?? "Unknown";
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.blueAccent,
+                      child: Text(name[0]),
+                    ),
+                    title: Text(name),
+                    subtitle: Text(chat["lastMessage"] ?? ""),
+                    trailing: Text(
+                      chat["lastMessageTime"] != null
+                          ? (chat["lastMessageTime"] as Timestamp)
+                          .toDate()
+                          .toLocal()
+                          .toString()
+                          .substring(11, 16) // HH:mm
+                          : "",
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatPage(
+                            Name: name,
+                            providerId: participants[0],
+                            clientId: participants[1],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
               );
             },
           );
